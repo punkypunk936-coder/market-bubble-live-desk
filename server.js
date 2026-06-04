@@ -7,10 +7,13 @@ const { WebSocket } = require("ws");
 
 const ROOT = __dirname;
 const STATIC_DIR = path.join(ROOT, "gui");
+const DATA_DIR = path.join(ROOT, "data");
+const STATE_FILE = path.join(DATA_DIR, "operator-state.json");
 const PORT = Number(process.env.PORT || 8899);
 const HISTORY_LIMIT = Number(process.env.HISTORY_LIMIT || 500);
 const RECONNECT_MIN_MS = 1000;
 const RECONNECT_MAX_MS = 30000;
+const PERSIST_DEBOUNCE_MS = 250;
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -76,6 +79,8 @@ const state = {
   },
 };
 
+let persistTimer = null;
+
 function envList(name) {
   return String(process.env[name] || "")
     .split(",")
@@ -106,6 +111,54 @@ function normalizeToken(token) {
 
 function hashId(parts) {
   return crypto.createHash("sha1").update(parts.filter(Boolean).join("|")).digest("hex").slice(0, 20);
+}
+
+function recomputeCounts() {
+  state.counts = { twitch: 0, x: 0, kick: 0, system: 0 };
+  for (const message of state.history) {
+    state.counts[message.source] = (state.counts[message.source] || 0) + 1;
+  }
+}
+
+function restoreSeenKeys() {
+  state.seen.clear();
+  for (const message of state.history) {
+    if (message.id && message.source) state.seen.set(`${message.source}:${message.id}`, Date.now());
+  }
+}
+
+function schedulePersist() {
+  if (persistTimer) clearTimeout(persistTimer);
+  persistTimer = setTimeout(() => {
+    persistTimer = null;
+    try {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+      const payload = {
+        version: 1,
+        savedAt: new Date().toISOString(),
+        history: state.history.slice(-HISTORY_LIMIT),
+        producerQueue: state.producerQueue.slice(0, 80),
+      };
+      const tmp = `${STATE_FILE}.tmp`;
+      fs.writeFileSync(tmp, JSON.stringify(payload, null, 2));
+      fs.renameSync(tmp, STATE_FILE);
+    } catch (error) {
+      console.warn(`Failed to persist operator state: ${error.message}`);
+    }
+  }, PERSIST_DEBOUNCE_MS);
+}
+
+function loadRuntimeState() {
+  try {
+    if (!fs.existsSync(STATE_FILE)) return;
+    const payload = JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
+    state.history = Array.isArray(payload.history) ? payload.history.slice(-HISTORY_LIMIT) : [];
+    state.producerQueue = Array.isArray(payload.producerQueue) ? payload.producerQueue.slice(0, 80) : [];
+    recomputeCounts();
+    restoreSeenKeys();
+  } catch (error) {
+    console.warn(`Failed to load operator state: ${error.message}`);
+  }
 }
 
 function compactSeen() {
@@ -145,6 +198,27 @@ function classifyMessage(text) {
   return "chat";
 }
 
+function matchedWatchTerms(text) {
+  const value = String(text || "").toLowerCase();
+  return appConfig.watchlist
+    .filter((term) => term && value.includes(String(term).toLowerCase()))
+    .slice(0, 6);
+}
+
+function scoreMessage({ source, text, intent }) {
+  const matchedTerms = matchedWatchTerms(text);
+  let score = 0;
+  if (intent === "question") score += 3;
+  if (intent === "market") score += 3;
+  if (intent === "clip") score += 2;
+  if (intent === "culture") score += 1;
+  if (source === "x") score += 1;
+  score += Math.min(matchedTerms.length * 2, 6);
+  if (/\b(banks|ansem|polymarket|bullpen)\b/i.test(text || "")) score += 2;
+  const priority = score >= 6 ? "high" : score >= 3 ? "medium" : "normal";
+  return { score, priority, matchedTerms };
+}
+
 function pushMessage(input) {
   const receivedAt = new Date().toISOString();
   const source = input.source || "system";
@@ -154,6 +228,8 @@ function pushMessage(input) {
   state.seen.set(dedupeKey, Date.now());
   compactSeen();
 
+  const intent = input.intent || classifyMessage(input.text);
+  const signal = scoreMessage({ source, text: input.text, intent });
   const message = {
     id,
     source,
@@ -167,7 +243,10 @@ function pushMessage(input) {
     createdAt: input.createdAt || receivedAt,
     receivedAt,
     link: input.link || "",
-    intent: input.intent || classifyMessage(input.text),
+    intent,
+    signalScore: signal.score,
+    priority: signal.priority,
+    matchedTerms: signal.matchedTerms,
     meta: input.meta || {},
   };
 
@@ -177,6 +256,7 @@ function pushMessage(input) {
   if (state.sources[source]) state.sources[source].lastMessageAt = receivedAt;
   broadcast("message", message);
   broadcast("metrics", metrics());
+  schedulePersist();
 }
 
 function metrics() {
@@ -277,13 +357,28 @@ async function handleApi(req, res, pathname) {
   if (req.method === "POST" && pathname === "/api/clear") {
     state.history = [];
     state.seen.clear();
+    recomputeCounts();
     broadcast("snapshot", { history: state.history, ...publicState() });
     jsonResponse(res, 200, { ok: true });
+    schedulePersist();
     return;
   }
   if (req.method === "POST" && pathname === "/api/queue/add") {
     const body = await readRequestBody(req);
-    const message = state.history.find((item) => item.id === body.messageId);
+    const snapshot = body.message && typeof body.message === "object" ? body.message : null;
+    const message = state.history.find((item) => item.id === body.messageId) || (snapshot?.text ? {
+      id: snapshot.id || body.messageId || hashId(["snapshot", snapshot.source, snapshot.channel, snapshot.user, snapshot.text]),
+      source: snapshot.source || "system",
+      sourceLabel: snapshot.sourceLabel || SOURCE_LABELS[snapshot.source] || snapshot.source || "System",
+      channel: snapshot.channel || "",
+      displayName: snapshot.displayName || snapshot.user || "unknown",
+      text: snapshot.text,
+      createdAt: snapshot.createdAt || snapshot.receivedAt || new Date().toISOString(),
+      intent: snapshot.intent || classifyMessage(snapshot.text),
+      priority: snapshot.priority || "normal",
+      matchedTerms: Array.isArray(snapshot.matchedTerms) ? snapshot.matchedTerms.slice(0, 6) : [],
+      signalScore: Number(snapshot.signalScore || 0),
+    } : null);
     if (!message) {
       jsonResponse(res, 404, { ok: false, error: "Message not found." });
       return;
@@ -301,6 +396,10 @@ async function handleApi(req, res, pathname) {
       displayName: message.displayName,
       text: message.text,
       createdAt: message.createdAt,
+      intent: message.intent,
+      priority: message.priority,
+      matchedTerms: message.matchedTerms || [],
+      signalScore: message.signalScore || 0,
       queuedAt: new Date().toISOString(),
       done: false,
     };
@@ -309,6 +408,7 @@ async function handleApi(req, res, pathname) {
     if (state.producerQueue.length > 80) state.producerQueue.splice(80);
     broadcast("queue", { producerQueue: state.producerQueue, metrics: metrics() });
     jsonResponse(res, 200, { ok: true, item: queueItem });
+    schedulePersist();
     return;
   }
   if (req.method === "POST" && pathname === "/api/queue/update") {
@@ -322,6 +422,7 @@ async function handleApi(req, res, pathname) {
     item.updatedAt = new Date().toISOString();
     broadcast("queue", { producerQueue: state.producerQueue, metrics: metrics() });
     jsonResponse(res, 200, { ok: true, item });
+    schedulePersist();
     return;
   }
   if (req.method === "POST" && pathname === "/api/queue/remove") {
@@ -329,18 +430,21 @@ async function handleApi(req, res, pathname) {
     state.producerQueue = state.producerQueue.filter((item) => item.id !== body.queueId);
     broadcast("queue", { producerQueue: state.producerQueue, metrics: metrics() });
     jsonResponse(res, 200, { ok: true });
+    schedulePersist();
     return;
   }
   if (req.method === "POST" && pathname === "/api/queue/clear-done") {
     state.producerQueue = state.producerQueue.filter((item) => !item.done);
     broadcast("queue", { producerQueue: state.producerQueue, metrics: metrics() });
     jsonResponse(res, 200, { ok: true });
+    schedulePersist();
     return;
   }
   if (req.method === "POST" && pathname === "/api/queue/clear") {
     state.producerQueue = [];
     broadcast("queue", { producerQueue: state.producerQueue, metrics: metrics() });
     jsonResponse(res, 200, { ok: true });
+    schedulePersist();
     return;
   }
   if (req.method === "POST" && pathname === "/api/demo-message") {
@@ -747,6 +851,8 @@ function startDemo() {
     });
   }, Number(process.env.DEMO_INTERVAL_MS || 1800));
 }
+
+loadRuntimeState();
 
 server.listen(PORT, () => {
   console.log(`Unified chat aggregator running at http://127.0.0.1:${PORT}`);

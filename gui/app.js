@@ -50,6 +50,19 @@ function formatTime(value) {
   }).format(date);
 }
 
+function relativeAge(value) {
+  if (!value) return "no messages yet";
+  const diff = Date.now() - new Date(value).getTime();
+  if (!Number.isFinite(diff) || diff < 0) return "just now";
+  const seconds = Math.floor(diff / 1000);
+  if (seconds < 5) return "just now";
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours}h ago`;
+}
+
 function sourceGlyph(source) {
   if (source === "kick") return "K";
   if (source === "x") return "X";
@@ -67,9 +80,35 @@ function intentLabel(intent) {
   }[intent || "chat"] || "Chat";
 }
 
+function priorityLabel(priority) {
+  return {
+    high: "High signal",
+    medium: "Signal",
+    normal: "",
+  }[priority || "normal"] || "";
+}
+
+function smartKindForMessage(message) {
+  if (message.intent === "question") return "question";
+  if (message.intent === "clip" || message.intent === "culture") return "clip";
+  return "signal";
+}
+
+function queuedKindsForMessage(messageId) {
+  return new Set(
+    (state.producerQueue || [])
+      .filter((item) => !item.done && item.messageId === messageId)
+      .map((item) => item.kind)
+  );
+}
+
 function passesFilters(message) {
   if (!state.filters.has(message.source)) return false;
-  if (state.intentFilter !== "all" && message.intent !== state.intentFilter) return false;
+  if (state.intentFilter === "high") {
+    if (message.priority !== "high") return false;
+  } else if (state.intentFilter !== "all" && message.intent !== state.intentFilter) {
+    return false;
+  }
   const query = state.query.trim().toLowerCase();
   if (!query) return true;
   return [message.text, message.displayName, message.user, message.channel, message.sourceLabel, message.intent]
@@ -86,12 +125,17 @@ function renderMessage(message, flash = false) {
   const user = template.querySelector(".messageUser");
   const channel = template.querySelector(".messageChannel");
   const intent = template.querySelector(".intentPill");
+  const priority = template.querySelector(".priorityPill");
+  const matchTerms = template.querySelector(".matchTerms");
   const text = template.querySelector(".messageText");
   const time = template.querySelector(".messageTime");
   const actions = template.querySelectorAll(".messageAction");
 
   row.classList.add(message.source);
+  row.classList.add(`priority-${message.priority || "normal"}`);
   row.dataset.messageId = message.id;
+  const queuedKinds = queuedKindsForMessage(message.id);
+  if (queuedKinds.size) row.classList.add("queued");
   if (flash) row.classList.add("flash");
   badge.classList.add(message.source);
   glyph.textContent = sourceGlyph(message.source);
@@ -102,11 +146,20 @@ function renderMessage(message, flash = false) {
   channel.textContent = message.channel ? `#${message.channel}` : "";
   intent.textContent = intentLabel(message.intent);
   intent.classList.add(message.intent || "chat");
+  priority.textContent = priorityLabel(message.priority);
+  if (message.priority) priority.classList.add(message.priority);
+  matchTerms.textContent = (message.matchedTerms || []).join(", ");
   text.textContent = escapeText(message.text);
   time.textContent = formatTime(message.createdAt || message.receivedAt);
   time.dateTime = message.createdAt || message.receivedAt || "";
   actions.forEach((button) => {
     button.dataset.id = message.id;
+    const action = button.dataset.action;
+    const kind = action === "smart" ? smartKindForMessage(message) : action;
+    if (["question", "signal", "clip"].includes(kind) && queuedKinds.has(kind)) {
+      button.textContent = action === "smart" ? "Queued" : "Added";
+      button.classList.add("queuedAction");
+    }
   });
 
   return row;
@@ -161,13 +214,16 @@ function renderSources() {
       const item = sources[source] || {};
       const status = item.status || "idle";
       const detail = item.detail || "Not configured.";
+      const lastAge = relativeAge(item.lastMessageAt);
+      const isStale = item.lastMessageAt && Date.now() - new Date(item.lastMessageAt).getTime() > 120000;
       return `
-        <div class="statusItem ${source}">
+        <div class="statusItem ${source}${isStale ? " stale" : ""}">
           <div class="statusTop">
             <span class="statusName">${sourceNames[source]}</span>
             <span class="statusPill">${status}</span>
           </div>
           <div class="statusDetail">${detail}</div>
+          <div class="statusMeta">Last item: ${escapeHtml(lastAge)}</div>
         </div>
       `;
     })
@@ -233,7 +289,7 @@ function renderProducerQueue() {
       (item) => `
         <article class="queueItem ${item.source}${item.done ? " done" : ""}">
           <div class="queueTop">
-            <span class="queueKind">${escapeHtml(queueKindLabel(item.kind))}</span>
+            <span class="queueKind">${escapeHtml(queueKindLabel(item.kind))}${item.priority === "high" ? " · High signal" : ""}</span>
             <div class="queueActions">
               <button class="queueButton" type="button" data-queue-action="done" data-queue-id="${item.id}">${item.done ? "Reopen" : "Done"}</button>
               <button class="queueButton" type="button" data-queue-action="copy" data-queue-id="${item.id}">Copy</button>
@@ -242,6 +298,7 @@ function renderProducerQueue() {
           </div>
           <strong>${escapeHtml(item.displayName || "unknown")}</strong>
           <p>${escapeHtml(item.text)}</p>
+          ${(item.matchedTerms || []).length ? `<div class="queueTerms">${item.matchedTerms.map((term) => `<span>${escapeHtml(term)}</span>`).join("")}</div>` : ""}
           <div class="queueMeta">${escapeHtml(item.sourceLabel || item.source)}${item.channel ? ` · #${escapeHtml(item.channel)}` : ""} · ${escapeHtml(formatTime(item.createdAt))}</div>
         </article>
       `
@@ -279,9 +336,10 @@ function updateConnectionLight() {
 
 function renderActiveFilterBar() {
   const activeSources = [...state.filters].map((source) => sourceNames[source] || source).join(" + ");
-  const type = state.intentFilter === "all" ? "All message types" : intentLabel(state.intentFilter);
+  const type = state.intentFilter === "all" ? "All message types" : state.intentFilter === "high" ? "High signal" : intentLabel(state.intentFilter);
+  const highCount = state.messages.filter((message) => state.filters.has(message.source) && message.priority === "high").length;
   const query = state.query.trim() ? `Search: "${state.query.trim()}"` : "No search";
-  $("activeFilterBar").textContent = `${activeSources || "No sources"} · ${type} · ${query}`;
+  $("activeFilterBar").textContent = `${activeSources || "No sources"} · ${type} · ${query} · ${highCount} high-signal items`;
 }
 
 function applySnapshot(payload) {
@@ -317,6 +375,7 @@ function connectEvents() {
     state.producerQueue = payload.producerQueue || [];
     state.metrics = payload.metrics || state.metrics;
     renderProducerQueue();
+    renderFeed();
     updateMetrics(state.metrics);
   });
   events.addEventListener("metrics", (event) => updateMetrics(JSON.parse(event.data)));
@@ -341,13 +400,30 @@ function getMessageById(id) {
 }
 
 function queueMessage(messageId, kind) {
-  return postJson("/api/queue/add", { messageId, kind });
+  const message = getMessageById(messageId);
+  return postJson("/api/queue/add", {
+    messageId,
+    kind,
+    message: message ? {
+      id: message.id,
+      source: message.source,
+      sourceLabel: message.sourceLabel,
+      channel: message.channel,
+      user: message.user,
+      displayName: message.displayName,
+      text: message.text,
+      createdAt: message.createdAt,
+      receivedAt: message.receivedAt,
+      intent: message.intent,
+      priority: message.priority,
+      matchedTerms: message.matchedTerms || [],
+      signalScore: message.signalScore || 0,
+    } : null,
+  });
 }
 
 function kindForMessage(message) {
-  if (message.intent === "question") return "question";
-  if (message.intent === "clip" || message.intent === "culture") return "clip";
-  return "signal";
+  return smartKindForMessage(message);
 }
 
 async function copyText(text) {
@@ -456,16 +532,24 @@ function bindControls() {
     if (!message) return;
     const action = button.dataset.action;
     if (action === "smart") {
-      await queueMessage(message.id, kindForMessage(message));
-      button.textContent = "Queued";
+      try {
+        await queueMessage(message.id, kindForMessage(message));
+        button.textContent = "Queued";
+      } catch (error) {
+        button.textContent = "Failed";
+      }
       setTimeout(() => {
         button.textContent = "Queue";
       }, 900);
       return;
     }
     if (["question", "signal", "clip"].includes(action)) {
-      await queueMessage(message.id, action);
-      button.textContent = "Queued";
+      try {
+        await queueMessage(message.id, action);
+        button.textContent = "Queued";
+      } catch (error) {
+        button.textContent = "Failed";
+      }
       setTimeout(() => {
         button.textContent = action === "question" ? "Ask" : action.charAt(0).toUpperCase() + action.slice(1);
       }, 900);
@@ -557,3 +641,7 @@ function bindControls() {
 
 bindControls();
 connectEvents();
+setInterval(() => {
+  renderSources();
+  updateMetrics();
+}, 30000);

@@ -1,2 +1,4 @@
 node_modules/
 .DS_Store
+data/operator-state.json
+data/operator-state.json.tmp

@@ -549,6 +549,19 @@ h2 {
   background: rgba(0, 0, 0, 0.28);
 }
 
+.messageRow.priority-high {
+  border-color: rgba(242, 198, 112, 0.48);
+  background: linear-gradient(90deg, rgba(242, 198, 112, 0.1), rgba(0, 0, 0, 0.28) 42%);
+}
+
+.messageRow.priority-medium {
+  border-color: rgba(242, 198, 112, 0.22);
+}
+
+.messageRow.queued {
+  box-shadow: inset 3px 0 0 rgba(242, 198, 112, 0.7);
+}
+
 .messageRow.flash {
   animation: flashIn 520ms ease-out;
 }
@@ -597,6 +610,43 @@ h2 {
   font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
+}
+
+.priorityPill {
+  width: max-content;
+  display: none;
+  align-items: center;
+  min-height: 22px;
+  margin-top: 6px;
+  margin-left: 6px;
+  border: 1px solid rgba(242, 198, 112, 0.28);
+  border-radius: 8px;
+  padding: 0 7px;
+  color: var(--gold-bright);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.priorityPill.high,
+.priorityPill.medium {
+  display: inline-flex;
+}
+
+.priorityPill.high {
+  border-color: rgba(242, 198, 112, 0.62);
+  background: rgba(242, 198, 112, 0.1);
+}
+
+.matchTerms {
+  display: block;
+  margin-top: 5px;
+  color: var(--gold);
+  font-size: 11px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .intentPill.question {
@@ -663,6 +713,12 @@ h2 {
 
 .primaryAction {
   border-color: rgba(242, 198, 112, 0.36);
+  color: var(--gold-bright);
+}
+
+.queuedAction {
+  border-color: rgba(242, 198, 112, 0.34);
+  background: rgba(242, 198, 112, 0.08);
   color: var(--gold-bright);
 }
 
@@ -799,6 +855,23 @@ h2 {
   overflow-wrap: anywhere;
 }
 
+.queueTerms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.queueTerms span {
+  border: 1px solid rgba(242, 198, 112, 0.22);
+  border-radius: 8px;
+  padding: 3px 7px;
+  color: var(--gold-bright);
+  background: rgba(242, 198, 112, 0.055);
+  font-size: 11px;
+  font-weight: 800;
+}
+
 .notesBlock details,
 .demoBlock {
   margin-top: 10px;
@@ -867,6 +940,20 @@ h2 {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.35;
+}
+
+.statusMeta {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.statusItem.stale {
+  border-color: rgba(255, 109, 97, 0.35);
+}
+
+.statusItem.stale .statusMeta {
+  color: #ffb5ad;
 }
 
 .metricGrid {
