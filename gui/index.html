@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Unified Chat Aggregator</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brandMark" aria-hidden="true">U</div>
+          <div>
+            <div class="eyebrow">$10,000 Vibe Code Challenge</div>
+            <h1>Unified Chat</h1>
+          </div>
+        </div>
+        <div class="topActions">
+          <div id="connectionLight" class="connectionLight">Connecting</div>
+          <button id="pauseBtn" class="iconButton" type="button" title="Pause feed" aria-label="Pause feed">
+            <span class="icon pauseIcon" aria-hidden="true"></span>
+          </button>
+          <button id="clearBtn" class="iconButton" type="button" title="Clear feed" aria-label="Clear feed">
+            <span class="icon clearIcon" aria-hidden="true"></span>
+          </button>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="feedPanel">
+          <div class="buildStrip">
+            <strong>The build:</strong>
+            <span>Twitch + X + Kick in one real-time feed with source labels.</span>
+          </div>
+
+          <div class="feedToolbar">
+            <div class="sourceToggles" role="group" aria-label="Source filters">
+              <button class="sourceToggle kick active" type="button" data-source="kick">
+                <span class="sourceGlyph">K</span>
+                <span>Kick</span>
+              </button>
+              <button class="sourceToggle x active" type="button" data-source="x">
+                <span class="sourceGlyph">X</span>
+                <span>X</span>
+              </button>
+              <button class="sourceToggle twitch active" type="button" data-source="twitch">
+                <span class="sourceGlyph twitchGlyph"></span>
+                <span>Twitch</span>
+              </button>
+            </div>
+            <label class="searchBox">
+              <span aria-hidden="true"></span>
+              <input id="searchInput" type="search" placeholder="Filter messages" autocomplete="off" />
+            </label>
+          </div>
+
+          <div id="feed" class="feed" aria-live="polite"></div>
+        </section>
+
+        <aside class="sidePanel">
+          <section class="panelBlock">
+            <div class="blockHeader">
+              <h2>Sources</h2>
+              <span id="clientCount" class="smallPill">0 viewers</span>
+            </div>
+            <div id="sourceStatus" class="sourceStatus"></div>
+          </section>
+
+          <section class="panelBlock statsBlock">
+            <h2>Volume</h2>
+            <div class="metricGrid">
+              <div class="metric kick">
+                <span>Kick</span>
+                <strong id="kickCount">0</strong>
+              </div>
+              <div class="metric x">
+                <span>X</span>
+                <strong id="xCount">0</strong>
+              </div>
+              <div class="metric twitch">
+                <span>Twitch</span>
+                <strong id="twitchCount">0</strong>
+              </div>
+              <div class="metric">
+                <span>Total</span>
+                <strong id="totalCount">0</strong>
+              </div>
+            </div>
+          </section>
+
+          <section class="panelBlock">
+            <h2>Test Pulse</h2>
+            <form id="testForm" class="testForm">
+              <select id="testSource" aria-label="Test source">
+                <option value="kick">Kick</option>
+                <option value="x">X</option>
+                <option value="twitch">Twitch</option>
+              </select>
+              <input id="testUser" type="text" value="operator" aria-label="Test username" />
+              <textarea id="testText" rows="3" aria-label="Test message">Fresh unified feed online.</textarea>
+              <button type="submit" class="primaryButton">Send Test</button>
+            </form>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <template id="messageTemplate">
+      <article class="messageRow">
+        <div class="sourceBadge">
+          <span class="sourceGlyph"></span>
+          <span class="sourceName"></span>
+        </div>
+        <div class="messageMeta">
+          <strong class="messageUser"></strong>
+          <span class="messageChannel"></span>
+        </div>
+        <p class="messageText"></p>
+        <time class="messageTime"></time>
+      </article>
+    </template>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>
