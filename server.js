@@ -30,9 +30,42 @@ const SOURCE_LABELS = {
   system: "System",
 };
 
+const appConfig = {
+  workspaceName: process.env.WORKSPACE_NAME || "Market Bubble Live Desk",
+  eyebrow: process.env.WORKSPACE_EYEBROW || "Internal producer console",
+  brandMark: process.env.WORKSPACE_MARK || "MB",
+  buildLabel: process.env.BUILD_LABEL || "Market Bubble desk:",
+  buildCopy: process.env.BUILD_COPY || "Twitch + X + Kick into one source-labeled live feed for the room.",
+  context: envList("WORKSPACE_CONTEXT").length
+    ? envList("WORKSPACE_CONTEXT")
+    : ["Banks + Ansem", "Prediction markets", "Crypto + AI", "Sports + culture", "Thursdays 1PM PST"],
+  segments: [
+    {
+      name: "Future-Proof",
+      brief: "AI, compute, frontier tech, and post-AGI money rails.",
+    },
+    {
+      name: "Culture Shock",
+      brief: "Internet-native moments, creator drama, viral clips, and attention.",
+    },
+    {
+      name: "Pick n' Roll",
+      brief: "Sports storylines, matchups, lines, and momentum.",
+    },
+    {
+      name: "The Price Is Wrong",
+      brief: "Mispricings, sentiment gaps, and market probabilities.",
+    },
+  ],
+  watchlist: envList("WORKSPACE_WATCHLIST").length
+    ? envList("WORKSPACE_WATCHLIST")
+    : ["Polymarket", "Bullpen", "HYPE", "HyperLiquid", "Ethereum", "Solana", "GTA 6", "AI compute"],
+};
+
 const state = {
   bootedAt: new Date().toISOString(),
   history: [],
+  producerQueue: [],
   clients: new Set(),
   seen: new Map(),
   counts: { twitch: 0, x: 0, kick: 0, system: 0 },
@@ -103,6 +136,15 @@ function publishStatus(source, status, detail, extra = {}) {
   broadcast("status", publicState());
 }
 
+function classifyMessage(text) {
+  const value = String(text || "").toLowerCase();
+  if (/[?？]/.test(value) || /\b(ask|question|why|how|what|wen|when|can you|thoughts)\b/.test(value)) return "question";
+  if (/\b(poly|polymarket|bullpen|odds|market|spread|line|mispriced|arb|probability|price|short|long|ticker|hype|eth|btc|sol|hyperliquid)\b/.test(value)) return "market";
+  if (/\b(clip|clipping|viral|quote|timestamp|cook|cooking|fire|insane)\b/.test(value)) return "clip";
+  if (/\b(gta|mizkif|banks|ansem|culture|stream|ct|twitter|x)\b/.test(value)) return "culture";
+  return "chat";
+}
+
 function pushMessage(input) {
   const receivedAt = new Date().toISOString();
   const source = input.source || "system";
@@ -125,6 +167,7 @@ function pushMessage(input) {
     createdAt: input.createdAt || receivedAt,
     receivedAt,
     link: input.link || "",
+    intent: input.intent || classifyMessage(input.text),
     meta: input.meta || {},
   };
 
@@ -140,6 +183,7 @@ function metrics() {
   return {
     counts: state.counts,
     total: state.history.length,
+    queued: state.producerQueue.length,
     clients: state.clients.size,
     bootedAt: state.bootedAt,
     lastMessageAt: state.history.length ? state.history[state.history.length - 1].receivedAt : null,
@@ -148,7 +192,9 @@ function metrics() {
 
 function publicState() {
   return {
+    config: appConfig,
     sources: state.sources,
+    producerQueue: state.producerQueue,
     metrics: metrics(),
   };
 }
@@ -229,6 +275,48 @@ async function handleApi(req, res, pathname) {
     state.history = [];
     state.seen.clear();
     broadcast("snapshot", { history: state.history, ...publicState() });
+    jsonResponse(res, 200, { ok: true });
+    return;
+  }
+  if (req.method === "POST" && pathname === "/api/queue/add") {
+    const body = await readRequestBody(req);
+    const message = state.history.find((item) => item.id === body.messageId);
+    if (!message) {
+      jsonResponse(res, 404, { ok: false, error: "Message not found." });
+      return;
+    }
+    const kind = ["question", "signal", "clip"].includes(body.kind) ? body.kind : "signal";
+    const queueId = hashId(["queue", kind, message.id]);
+    const existingIndex = state.producerQueue.findIndex((item) => item.id === queueId);
+    const queueItem = {
+      id: queueId,
+      kind,
+      messageId: message.id,
+      source: message.source,
+      sourceLabel: message.sourceLabel,
+      channel: message.channel,
+      displayName: message.displayName,
+      text: message.text,
+      createdAt: message.createdAt,
+      queuedAt: new Date().toISOString(),
+    };
+    if (existingIndex >= 0) state.producerQueue.splice(existingIndex, 1);
+    state.producerQueue.unshift(queueItem);
+    if (state.producerQueue.length > 80) state.producerQueue.splice(80);
+    broadcast("queue", { producerQueue: state.producerQueue, metrics: metrics() });
+    jsonResponse(res, 200, { ok: true, item: queueItem });
+    return;
+  }
+  if (req.method === "POST" && pathname === "/api/queue/remove") {
+    const body = await readRequestBody(req);
+    state.producerQueue = state.producerQueue.filter((item) => item.id !== body.queueId);
+    broadcast("queue", { producerQueue: state.producerQueue, metrics: metrics() });
+    jsonResponse(res, 200, { ok: true });
+    return;
+  }
+  if (req.method === "POST" && pathname === "/api/queue/clear") {
+    state.producerQueue = [];
+    broadcast("queue", { producerQueue: state.producerQueue, metrics: metrics() });
     jsonResponse(res, 200, { ok: true });
     return;
   }
@@ -613,12 +701,12 @@ function startX() {
 
 function startDemo() {
   const samples = [
-    { source: "kick", channel: "market-bubble", user: "user91", text: "HYPE just different" },
-    { source: "x", channel: "HYPE OR polymarket", user: "user1337", text: "thanks for the polymarket picks" },
-    { source: "twitch", channel: "stream", user: "user67", text: "Ansem is cooking again" },
-    { source: "kick", channel: "market-bubble", user: "mod_alpha", text: "Kick chat is rolling in clean" },
-    { source: "twitch", channel: "stream", user: "chartwatcher", text: "clip that, feed caught it first" },
-    { source: "x", channel: "watchlist", user: "timeline_pro", text: "real-time labels make this usable" },
+    { source: "kick", channel: "market-bubble", user: "user91", text: "HYPE just different, is this The Price Is Wrong?" },
+    { source: "x", channel: "Polymarket OR Bullpen", user: "ct_user1337", text: "Bullpen spreads on baseball are starting to move before the desk mentions it" },
+    { source: "twitch", channel: "live-show", user: "user67", text: "Ask Ansem why ETH is lagging if compute is the trade" },
+    { source: "kick", channel: "market-bubble", user: "mod_alpha", text: "Culture Shock segment should hit the GTA 6 market next" },
+    { source: "twitch", channel: "live-show", user: "chartwatcher", text: "clip that Banks quote, attention is still the new EBITDA" },
+    { source: "x", channel: "Market Bubble watchlist", user: "timeline_pro", text: "Polymarket odds moved 6 points during the Future-Proof block" },
   ];
   let index = 0;
   publishStatus("twitch", "demo", "Demo messages are enabled.", { enabled: true, channels: ["stream"] });

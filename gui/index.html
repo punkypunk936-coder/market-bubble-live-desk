@@ -3,17 +3,17 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Unified Chat Aggregator</title>
+    <title>Market Bubble Live Desk</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <div class="shell">
       <header class="topbar">
         <div class="brand">
-          <div class="brandMark" aria-hidden="true">U</div>
+          <div id="brandMark" class="brandMark" aria-hidden="true">MB</div>
           <div>
-            <div class="eyebrow">$10,000 Vibe Code Challenge</div>
-            <h1>Unified Chat</h1>
+            <div id="workspaceEyebrow" class="eyebrow">Internal producer console</div>
+            <h1 id="workspaceName">Market Bubble Live Desk</h1>
           </div>
         </div>
         <div class="topActions">
@@ -30,9 +30,10 @@
       <main class="layout">
         <section class="feedPanel">
           <div class="buildStrip">
-            <strong>The build:</strong>
-            <span>Twitch + X + Kick in one real-time feed with source labels.</span>
+            <strong id="buildLabel">Market Bubble desk:</strong>
+            <span id="buildCopy">Twitch + X + Kick into one source-labeled live feed for the room.</span>
           </div>
+          <div id="contextRail" class="contextRail"></div>
 
           <div class="feedToolbar">
             <div class="sourceToggles" role="group" aria-label="Source filters">
@@ -51,7 +52,7 @@
             </div>
             <label class="searchBox">
               <span aria-hidden="true"></span>
-              <input id="searchInput" type="search" placeholder="Filter messages" autocomplete="off" />
+              <input id="searchInput" type="search" placeholder="Search live desk" autocomplete="off" />
             </label>
           </div>
 
@@ -59,6 +60,24 @@
         </section>
 
         <aside class="sidePanel">
+          <section class="panelBlock queueBlock">
+            <div class="blockHeader">
+              <h2>Producer Queue</h2>
+              <button id="clearQueueBtn" class="miniButton" type="button">Clear</button>
+            </div>
+            <div id="producerQueue" class="producerQueue"></div>
+          </section>
+
+          <section class="panelBlock">
+            <h2>Run Of Show</h2>
+            <div id="runOfShow" class="runOfShow"></div>
+          </section>
+
+          <section class="panelBlock">
+            <h2>Watchlist</h2>
+            <div id="watchlist" class="watchlist"></div>
+          </section>
+
           <section class="panelBlock">
             <div class="blockHeader">
               <h2>Sources</h2>
@@ -90,7 +109,7 @@
           </section>
 
           <section class="panelBlock">
-            <h2>Test Pulse</h2>
+            <h2>Producer Pulse</h2>
             <form id="testForm" class="testForm">
               <select id="testSource" aria-label="Test source">
                 <option value="kick">Kick</option>
@@ -98,7 +117,7 @@
                 <option value="twitch">Twitch</option>
               </select>
               <input id="testUser" type="text" value="operator" aria-label="Test username" />
-              <textarea id="testText" rows="3" aria-label="Test message">Fresh unified feed online.</textarea>
+              <textarea id="testText" rows="3" aria-label="Test message">Ask Ansem which market is most mispriced right now.</textarea>
               <button type="submit" class="primaryButton">Send Test</button>
             </form>
           </section>
@@ -115,9 +134,16 @@
         <div class="messageMeta">
           <strong class="messageUser"></strong>
           <span class="messageChannel"></span>
+          <span class="intentPill"></span>
         </div>
         <p class="messageText"></p>
         <time class="messageTime"></time>
+        <div class="messageActions">
+          <button class="messageAction" type="button" data-action="question">Question</button>
+          <button class="messageAction" type="button" data-action="signal">Signal</button>
+          <button class="messageAction" type="button" data-action="clip">Clip</button>
+          <button class="messageAction" type="button" data-action="copy">Copy</button>
+        </div>
       </article>
     </template>
 

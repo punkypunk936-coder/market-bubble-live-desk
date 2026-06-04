@@ -6,6 +6,8 @@ const state = {
   query: "",
   metrics: { counts: {}, total: 0, clients: 0 },
   sources: {},
+  producerQueue: [],
+  config: {},
 };
 
 const sourceNames = {
@@ -21,6 +23,15 @@ function $(id) {
 
 function escapeText(value) {
   return String(value || "");
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 function formatTime(value) {
@@ -41,11 +52,21 @@ function sourceGlyph(source) {
   return "U";
 }
 
+function intentLabel(intent) {
+  return {
+    question: "Question",
+    market: "Market",
+    clip: "Clip",
+    culture: "Culture",
+    chat: "Chat",
+  }[intent || "chat"] || "Chat";
+}
+
 function passesFilters(message) {
   if (!state.filters.has(message.source)) return false;
   const query = state.query.trim().toLowerCase();
   if (!query) return true;
-  return [message.text, message.displayName, message.user, message.channel, message.sourceLabel]
+  return [message.text, message.displayName, message.user, message.channel, message.sourceLabel, message.intent]
     .filter(Boolean)
     .some((part) => String(part).toLowerCase().includes(query));
 }
@@ -58,10 +79,13 @@ function renderMessage(message, flash = false) {
   const sourceName = template.querySelector(".sourceName");
   const user = template.querySelector(".messageUser");
   const channel = template.querySelector(".messageChannel");
+  const intent = template.querySelector(".intentPill");
   const text = template.querySelector(".messageText");
   const time = template.querySelector(".messageTime");
+  const actions = template.querySelectorAll(".messageAction");
 
   row.classList.add(message.source);
+  row.dataset.messageId = message.id;
   if (flash) row.classList.add("flash");
   badge.classList.add(message.source);
   glyph.textContent = sourceGlyph(message.source);
@@ -70,9 +94,14 @@ function renderMessage(message, flash = false) {
   user.textContent = message.displayName || message.user || "unknown";
   user.title = message.displayName || message.user || "";
   channel.textContent = message.channel ? `#${message.channel}` : "";
+  intent.textContent = intentLabel(message.intent);
+  intent.classList.add(message.intent || "chat");
   text.textContent = escapeText(message.text);
   time.textContent = formatTime(message.createdAt || message.receivedAt);
   time.dateTime = message.createdAt || message.receivedAt || "";
+  actions.forEach((button) => {
+    button.dataset.id = message.id;
+  });
 
   return row;
 }
@@ -135,6 +164,67 @@ function renderSources() {
     .join("");
 }
 
+function renderConfig() {
+  const config = state.config || {};
+  const name = config.workspaceName || "Market Bubble Live Desk";
+  document.title = name;
+  $("workspaceName").textContent = name;
+  $("workspaceEyebrow").textContent = config.eyebrow || "Internal producer console";
+  $("brandMark").textContent = config.brandMark || "MB";
+  $("buildLabel").textContent = config.buildLabel || "Market Bubble desk:";
+  $("buildCopy").textContent = config.buildCopy || "Twitch + X + Kick into one source-labeled live feed for the room.";
+
+  $("contextRail").innerHTML = (config.context || [])
+    .map((item) => `<span class="contextChip">${escapeHtml(item)}</span>`)
+    .join("");
+  $("runOfShow").innerHTML = (config.segments || [])
+    .map(
+      (segment) => `
+        <div class="segmentItem">
+          <strong>${escapeHtml(segment.name)}</strong>
+          <span>${escapeHtml(segment.brief)}</span>
+        </div>
+      `
+    )
+    .join("");
+  $("watchlist").innerHTML = (config.watchlist || [])
+    .map((item) => `<span class="watchChip">${escapeHtml(item)}</span>`)
+    .join("");
+}
+
+function queueKindLabel(kind) {
+  return {
+    question: "On-air question",
+    signal: "Market signal",
+    clip: "Clip candidate",
+  }[kind] || "Queued";
+}
+
+function renderProducerQueue() {
+  const node = $("producerQueue");
+  const items = state.producerQueue || [];
+  if (!items.length) {
+    node.innerHTML = `<div class="emptyState compact">No queued items.</div>`;
+    return;
+  }
+  node.innerHTML = items
+    .slice(0, 18)
+    .map(
+      (item) => `
+        <article class="queueItem ${item.source}">
+          <div class="queueTop">
+            <span class="queueKind">${escapeHtml(queueKindLabel(item.kind))}</span>
+            <button class="queueRemove" type="button" data-queue-id="${item.id}" aria-label="Remove queued item"></button>
+          </div>
+          <strong>${escapeHtml(item.displayName || "unknown")}</strong>
+          <p>${escapeHtml(item.text)}</p>
+          <div class="queueMeta">${escapeHtml(item.sourceLabel || item.source)}${item.channel ? ` · #${escapeHtml(item.channel)}` : ""} · ${escapeHtml(formatTime(item.createdAt))}</div>
+        </article>
+      `
+    )
+    .join("");
+}
+
 function updateMetrics(payload) {
   if (payload) state.metrics = payload;
   const counts = state.metrics.counts || {};
@@ -142,7 +232,7 @@ function updateMetrics(payload) {
   $("xCount").textContent = counts.x || 0;
   $("twitchCount").textContent = counts.twitch || 0;
   $("totalCount").textContent = state.messages.length;
-  $("clientCount").textContent = `${state.metrics.clients || 0} viewer${state.metrics.clients === 1 ? "" : "s"}`;
+  $("clientCount").textContent = `${state.metrics.clients || 0} viewer${state.metrics.clients === 1 ? "" : "s"} · ${state.producerQueue.length} queued`;
   updateConnectionLight();
 }
 
@@ -165,8 +255,12 @@ function updateConnectionLight() {
 function applySnapshot(payload) {
   state.messages = Array.isArray(payload.history) ? payload.history : [];
   state.sources = payload.sources || {};
+  state.config = payload.config || {};
+  state.producerQueue = payload.producerQueue || [];
   state.metrics = payload.metrics || state.metrics;
+  renderConfig();
   renderFeed();
+  renderProducerQueue();
   renderSources();
   updateMetrics(state.metrics);
 }
@@ -178,8 +272,19 @@ function connectEvents() {
   events.addEventListener("status", (event) => {
     const payload = JSON.parse(event.data);
     state.sources = payload.sources || {};
+    state.config = payload.config || state.config;
+    state.producerQueue = payload.producerQueue || state.producerQueue;
     state.metrics = payload.metrics || state.metrics;
+    renderConfig();
+    renderProducerQueue();
     renderSources();
+    updateMetrics(state.metrics);
+  });
+  events.addEventListener("queue", (event) => {
+    const payload = JSON.parse(event.data);
+    state.producerQueue = payload.producerQueue || [];
+    state.metrics = payload.metrics || state.metrics;
+    renderProducerQueue();
     updateMetrics(state.metrics);
   });
   events.addEventListener("metrics", (event) => updateMetrics(JSON.parse(event.data)));
@@ -197,6 +302,33 @@ async function postJson(path, body = {}) {
   });
   if (!response.ok) throw new Error(`Request failed: ${response.status}`);
   return response.json();
+}
+
+function getMessageById(id) {
+  return state.messages.find((message) => message.id === id);
+}
+
+function queueMessage(messageId, kind) {
+  return postJson("/api/queue/add", { messageId, kind });
+}
+
+async function copyText(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  const area = document.createElement("textarea");
+  area.value = text;
+  area.style.position = "fixed";
+  area.style.opacity = "0";
+  document.body.appendChild(area);
+  area.select();
+  document.execCommand("copy");
+  area.remove();
+}
+
+function formatForClipboard(message) {
+  return `[${message.sourceLabel || message.source}${message.channel ? ` #${message.channel}` : ""}] ${message.displayName || message.user}: ${message.text}`;
 }
 
 function bindControls() {
@@ -219,6 +351,46 @@ function bindControls() {
     renderFeed();
     updateMetrics();
     await postJson("/api/clear");
+  });
+
+  $("clearQueueBtn").addEventListener("click", async () => {
+    state.producerQueue = [];
+    renderProducerQueue();
+    updateMetrics();
+    await postJson("/api/queue/clear");
+  });
+
+  $("feed").addEventListener("click", async (event) => {
+    const button = event.target.closest(".messageAction");
+    if (!button) return;
+    const message = getMessageById(button.dataset.id);
+    if (!message) return;
+    const action = button.dataset.action;
+    if (["question", "signal", "clip"].includes(action)) {
+      await queueMessage(message.id, action);
+      button.textContent = "Queued";
+      setTimeout(() => {
+        button.textContent = action.charAt(0).toUpperCase() + action.slice(1);
+      }, 900);
+      return;
+    }
+    if (action === "copy") {
+      await copyText(formatForClipboard(message));
+      button.textContent = "Copied";
+      setTimeout(() => {
+        button.textContent = "Copy";
+      }, 900);
+    }
+  });
+
+  $("producerQueue").addEventListener("click", async (event) => {
+    const button = event.target.closest(".queueRemove");
+    if (!button) return;
+    const queueId = button.dataset.queueId;
+    state.producerQueue = state.producerQueue.filter((item) => item.id !== queueId);
+    renderProducerQueue();
+    updateMetrics();
+    await postJson("/api/queue/remove", { queueId });
   });
 
   document.querySelectorAll(".sourceToggle").forEach((button) => {

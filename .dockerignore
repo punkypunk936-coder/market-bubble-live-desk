@@ -1,0 +1,5 @@
+node_modules
+.git
+.DS_Store
+screenshot-desktop.png
+screenshot-mobile.png
