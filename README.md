@@ -42,9 +42,10 @@ Replace the Twitch/Kick channel names with the actual live channel slugs if they
 
 1. Keep the main feed open during the live show.
 2. Use source toggles and search to narrow the room.
-3. Click `Question`, `Signal`, or `Clip` on any message.
-4. Use the Producer Queue as the handoff surface for hosts, showrunner, or clipping team.
-5. Use `Copy` to paste a source-labeled item into Slack, Discord, rundown docs, or an OBS note source.
+3. Use the `View` controls to isolate questions, market signals, clip candidates, or culture chatter.
+4. Click `Queue` for the app's best guess, or use `Ask`, `Signal`, and `Clip` to route a message manually.
+5. Work the Operator Queue: `Done` closes an item, `Reopen` brings it back, `Copy` copies one item, and `Copy Rundown` copies the open queue grouped by segment use.
+6. Use `Auto-scroll` when actively watching live flow, and turn it off when reviewing older messages. `Dense` compresses the feed for high-volume moments.
 
 ## Deployment
 

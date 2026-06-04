@@ -3,11 +3,16 @@ const state = {
   paused: false,
   queue: [],
   filters: new Set(["kick", "x", "twitch"]),
+  intentFilter: "all",
+  queueFilter: "open",
   query: "",
+  autoScroll: true,
+  dense: false,
   metrics: { counts: {}, total: 0, clients: 0 },
   sources: {},
   producerQueue: [],
   config: {},
+  visibleCount: 0,
 };
 
 const sourceNames = {
@@ -64,6 +69,7 @@ function intentLabel(intent) {
 
 function passesFilters(message) {
   if (!state.filters.has(message.source)) return false;
+  if (state.intentFilter !== "all" && message.intent !== state.intentFilter) return false;
   const query = state.query.trim().toLowerCase();
   if (!query) return true;
   return [message.text, message.displayName, message.user, message.channel, message.sourceLabel, message.intent]
@@ -109,16 +115,19 @@ function renderMessage(message, flash = false) {
 function renderFeed() {
   const feed = $("feed");
   const visible = state.messages.filter(passesFilters).slice(-250);
+  state.visibleCount = visible.length;
   feed.innerHTML = "";
   if (!visible.length) {
     const empty = document.createElement("div");
     empty.className = "emptyState";
     empty.textContent = "No messages match the current filters.";
     feed.appendChild(empty);
+    updateMetrics();
     return;
   }
   for (const message of visible) feed.appendChild(renderMessage(message));
-  feed.scrollTop = feed.scrollHeight;
+  if (state.autoScroll) feed.scrollTop = feed.scrollHeight;
+  updateMetrics();
 }
 
 function appendMessage(message) {
@@ -139,7 +148,8 @@ function appendMessage(message) {
   feed.appendChild(renderMessage(message, true));
   const rows = feed.querySelectorAll(".messageRow");
   if (rows.length > 250) rows[0].remove();
-  feed.scrollTop = feed.scrollHeight;
+  state.visibleCount = rows.length;
+  if (state.autoScroll) feed.scrollTop = feed.scrollHeight;
   updateMetrics();
 }
 
@@ -200,21 +210,35 @@ function queueKindLabel(kind) {
   }[kind] || "Queued";
 }
 
+function filteredQueueItems() {
+  const items = state.producerQueue || [];
+  if (state.queueFilter === "open") return items.filter((item) => !item.done);
+  if (state.queueFilter === "done") return items.filter((item) => item.done);
+  return items.filter((item) => !item.done && item.kind === state.queueFilter);
+}
+
 function renderProducerQueue() {
   const node = $("producerQueue");
-  const items = state.producerQueue || [];
+  const items = filteredQueueItems();
+  const open = (state.producerQueue || []).filter((item) => !item.done).length;
+  const done = (state.producerQueue || []).filter((item) => item.done).length;
+  $("queueSummary").textContent = `${open} open · ${done} done`;
   if (!items.length) {
-    node.innerHTML = `<div class="emptyState compact">No queued items.</div>`;
+    node.innerHTML = `<div class="emptyState compact">No ${state.queueFilter === "open" ? "open" : state.queueFilter} items.</div>`;
     return;
   }
   node.innerHTML = items
     .slice(0, 18)
     .map(
       (item) => `
-        <article class="queueItem ${item.source}">
+        <article class="queueItem ${item.source}${item.done ? " done" : ""}">
           <div class="queueTop">
             <span class="queueKind">${escapeHtml(queueKindLabel(item.kind))}</span>
-            <button class="queueRemove" type="button" data-queue-id="${item.id}" aria-label="Remove queued item"></button>
+            <div class="queueActions">
+              <button class="queueButton" type="button" data-queue-action="done" data-queue-id="${item.id}">${item.done ? "Reopen" : "Done"}</button>
+              <button class="queueButton" type="button" data-queue-action="copy" data-queue-id="${item.id}">Copy</button>
+              <button class="queueRemove" type="button" data-queue-action="remove" data-queue-id="${item.id}" aria-label="Remove queued item"></button>
+            </div>
           </div>
           <strong>${escapeHtml(item.displayName || "unknown")}</strong>
           <p>${escapeHtml(item.text)}</p>
@@ -227,12 +251,13 @@ function renderProducerQueue() {
 
 function updateMetrics(payload) {
   if (payload) state.metrics = payload;
-  const counts = state.metrics.counts || {};
-  $("kickCount").textContent = counts.kick || 0;
-  $("xCount").textContent = counts.x || 0;
-  $("twitchCount").textContent = counts.twitch || 0;
-  $("totalCount").textContent = state.messages.length;
-  $("clientCount").textContent = `${state.metrics.clients || 0} viewer${state.metrics.clients === 1 ? "" : "s"} · ${state.producerQueue.length} queued`;
+  const open = (state.producerQueue || []).filter((item) => !item.done).length;
+  const done = (state.producerQueue || []).filter((item) => item.done).length;
+  $("visibleCount").textContent = state.visibleCount || state.messages.filter(passesFilters).length;
+  $("queuedCount").textContent = open;
+  $("doneCount").textContent = done;
+  $("clientCount").textContent = `${state.metrics.clients || 0} viewer${state.metrics.clients === 1 ? "" : "s"}`;
+  renderActiveFilterBar();
   updateConnectionLight();
 }
 
@@ -250,6 +275,13 @@ function updateConnectionLight() {
   } else {
     light.textContent = "Connecting";
   }
+}
+
+function renderActiveFilterBar() {
+  const activeSources = [...state.filters].map((source) => sourceNames[source] || source).join(" + ");
+  const type = state.intentFilter === "all" ? "All message types" : intentLabel(state.intentFilter);
+  const query = state.query.trim() ? `Search: "${state.query.trim()}"` : "No search";
+  $("activeFilterBar").textContent = `${activeSources || "No sources"} · ${type} · ${query}`;
 }
 
 function applySnapshot(payload) {
@@ -312,10 +344,20 @@ function queueMessage(messageId, kind) {
   return postJson("/api/queue/add", { messageId, kind });
 }
 
+function kindForMessage(message) {
+  if (message.intent === "question") return "question";
+  if (message.intent === "clip" || message.intent === "culture") return "clip";
+  return "signal";
+}
+
 async function copyText(text) {
   if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(text);
-    return;
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (error) {
+      // Fall through to the textarea fallback when clipboard permissions are blocked.
+    }
   }
   const area = document.createElement("textarea");
   area.value = text;
@@ -323,12 +365,35 @@ async function copyText(text) {
   area.style.opacity = "0";
   document.body.appendChild(area);
   area.select();
-  document.execCommand("copy");
+  const ok = document.execCommand("copy");
   area.remove();
+  return ok;
 }
 
 function formatForClipboard(message) {
   return `[${message.sourceLabel || message.source}${message.channel ? ` #${message.channel}` : ""}] ${message.displayName || message.user}: ${message.text}`;
+}
+
+function formatQueueItem(item) {
+  return `[${queueKindLabel(item.kind)} · ${item.sourceLabel || item.source}${item.channel ? ` #${item.channel}` : ""}] ${item.displayName || "unknown"}: ${item.text}`;
+}
+
+function formatRundown() {
+  const openItems = (state.producerQueue || []).filter((item) => !item.done);
+  if (!openItems.length) return "Market Bubble Live Desk rundown: no open queued items.";
+  const groups = [
+    ["question", "On-air Questions"],
+    ["signal", "Market Signals"],
+    ["clip", "Clip Candidates"],
+  ];
+  return groups
+    .map(([kind, label]) => {
+      const items = openItems.filter((item) => item.kind === kind);
+      if (!items.length) return "";
+      return `${label}\n${items.map((item, index) => `${index + 1}. ${formatQueueItem(item)}`).join("\n")}`;
+    })
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 function bindControls() {
@@ -336,6 +401,7 @@ function bindControls() {
     state.paused = !state.paused;
     $("pauseBtn").classList.toggle("isPaused", state.paused);
     $("pauseBtn").title = state.paused ? "Resume feed" : "Pause feed";
+    $("pauseLabel").textContent = state.paused ? "Resume" : "Pause";
     if (!state.paused && state.queue.length) {
       const queued = [...state.queue];
       state.queue = [];
@@ -343,6 +409,21 @@ function bindControls() {
       renderFeed();
     }
     updateConnectionLight();
+  });
+
+  $("autoScrollBtn").addEventListener("click", () => {
+    state.autoScroll = !state.autoScroll;
+    $("autoScrollBtn").classList.toggle("active", state.autoScroll);
+    if (state.autoScroll) {
+      const feed = $("feed");
+      feed.scrollTop = feed.scrollHeight;
+    }
+  });
+
+  $("densityBtn").addEventListener("click", () => {
+    state.dense = !state.dense;
+    document.body.classList.toggle("denseMode", state.dense);
+    $("densityBtn").classList.toggle("active", state.dense);
   });
 
   $("clearBtn").addEventListener("click", async () => {
@@ -353,11 +434,19 @@ function bindControls() {
     await postJson("/api/clear");
   });
 
-  $("clearQueueBtn").addEventListener("click", async () => {
-    state.producerQueue = [];
+  $("clearDoneBtn").addEventListener("click", async () => {
+    state.producerQueue = state.producerQueue.filter((item) => !item.done);
     renderProducerQueue();
     updateMetrics();
-    await postJson("/api/queue/clear");
+    await postJson("/api/queue/clear-done");
+  });
+
+  $("copyRundownBtn").addEventListener("click", async () => {
+    await copyText(formatRundown());
+    $("copyRundownBtn").textContent = "Copied";
+    setTimeout(() => {
+      $("copyRundownBtn").textContent = "Copy Rundown";
+    }, 900);
   });
 
   $("feed").addEventListener("click", async (event) => {
@@ -366,11 +455,19 @@ function bindControls() {
     const message = getMessageById(button.dataset.id);
     if (!message) return;
     const action = button.dataset.action;
+    if (action === "smart") {
+      await queueMessage(message.id, kindForMessage(message));
+      button.textContent = "Queued";
+      setTimeout(() => {
+        button.textContent = "Queue";
+      }, 900);
+      return;
+    }
     if (["question", "signal", "clip"].includes(action)) {
       await queueMessage(message.id, action);
       button.textContent = "Queued";
       setTimeout(() => {
-        button.textContent = action.charAt(0).toUpperCase() + action.slice(1);
+        button.textContent = action === "question" ? "Ask" : action.charAt(0).toUpperCase() + action.slice(1);
       }, 900);
       return;
     }
@@ -384,13 +481,32 @@ function bindControls() {
   });
 
   $("producerQueue").addEventListener("click", async (event) => {
-    const button = event.target.closest(".queueRemove");
+    const button = event.target.closest("[data-queue-action]");
     if (!button) return;
     const queueId = button.dataset.queueId;
-    state.producerQueue = state.producerQueue.filter((item) => item.id !== queueId);
-    renderProducerQueue();
-    updateMetrics();
-    await postJson("/api/queue/remove", { queueId });
+    const item = state.producerQueue.find((queueItem) => queueItem.id === queueId);
+    if (!item) return;
+    if (button.dataset.queueAction === "done") {
+      item.done = !item.done;
+      renderProducerQueue();
+      updateMetrics();
+      await postJson("/api/queue/update", { queueId, done: item.done });
+      return;
+    }
+    if (button.dataset.queueAction === "copy") {
+      await copyText(formatQueueItem(item));
+      button.textContent = "Copied";
+      setTimeout(() => {
+        button.textContent = "Copy";
+      }, 900);
+      return;
+    }
+    if (button.dataset.queueAction === "remove") {
+      state.producerQueue = state.producerQueue.filter((queueItem) => queueItem.id !== queueId);
+      renderProducerQueue();
+      updateMetrics();
+      await postJson("/api/queue/remove", { queueId });
+    }
   });
 
   document.querySelectorAll(".sourceToggle").forEach((button) => {
@@ -400,6 +516,26 @@ function bindControls() {
       else state.filters.add(source);
       button.classList.toggle("active", state.filters.has(source));
       renderFeed();
+    });
+  });
+
+  document.querySelectorAll(".viewToggle").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.intentFilter = button.dataset.intent || "all";
+      document.querySelectorAll(".viewToggle").forEach((item) => {
+        item.classList.toggle("active", item === button);
+      });
+      renderFeed();
+    });
+  });
+
+  document.querySelectorAll(".queueTab").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.queueFilter = button.dataset.queueFilter || "open";
+      document.querySelectorAll(".queueTab").forEach((item) => {
+        item.classList.toggle("active", item === button);
+      });
+      renderProducerQueue();
     });
   });
 

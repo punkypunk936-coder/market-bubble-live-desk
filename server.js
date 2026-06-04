@@ -180,10 +180,13 @@ function pushMessage(input) {
 }
 
 function metrics() {
+  const openQueue = state.producerQueue.filter((item) => !item.done).length;
   return {
     counts: state.counts,
     total: state.history.length,
     queued: state.producerQueue.length,
+    openQueued: openQueue,
+    doneQueued: state.producerQueue.length - openQueue,
     clients: state.clients.size,
     bootedAt: state.bootedAt,
     lastMessageAt: state.history.length ? state.history[state.history.length - 1].receivedAt : null,
@@ -299,6 +302,7 @@ async function handleApi(req, res, pathname) {
       text: message.text,
       createdAt: message.createdAt,
       queuedAt: new Date().toISOString(),
+      done: false,
     };
     if (existingIndex >= 0) state.producerQueue.splice(existingIndex, 1);
     state.producerQueue.unshift(queueItem);
@@ -307,9 +311,28 @@ async function handleApi(req, res, pathname) {
     jsonResponse(res, 200, { ok: true, item: queueItem });
     return;
   }
+  if (req.method === "POST" && pathname === "/api/queue/update") {
+    const body = await readRequestBody(req);
+    const item = state.producerQueue.find((queueItem) => queueItem.id === body.queueId);
+    if (!item) {
+      jsonResponse(res, 404, { ok: false, error: "Queued item not found." });
+      return;
+    }
+    if (typeof body.done === "boolean") item.done = body.done;
+    item.updatedAt = new Date().toISOString();
+    broadcast("queue", { producerQueue: state.producerQueue, metrics: metrics() });
+    jsonResponse(res, 200, { ok: true, item });
+    return;
+  }
   if (req.method === "POST" && pathname === "/api/queue/remove") {
     const body = await readRequestBody(req);
     state.producerQueue = state.producerQueue.filter((item) => item.id !== body.queueId);
+    broadcast("queue", { producerQueue: state.producerQueue, metrics: metrics() });
+    jsonResponse(res, 200, { ok: true });
+    return;
+  }
+  if (req.method === "POST" && pathname === "/api/queue/clear-done") {
+    state.producerQueue = state.producerQueue.filter((item) => !item.done);
     broadcast("queue", { producerQueue: state.producerQueue, metrics: metrics() });
     jsonResponse(res, 200, { ok: true });
     return;

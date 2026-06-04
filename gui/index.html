@@ -18,98 +18,130 @@
         </div>
         <div class="topActions">
           <div id="connectionLight" class="connectionLight">Connecting</div>
-          <button id="pauseBtn" class="iconButton" type="button" title="Pause feed" aria-label="Pause feed">
+          <button id="pauseBtn" class="controlButton" type="button" title="Pause feed" aria-label="Pause feed">
             <span class="icon pauseIcon" aria-hidden="true"></span>
+            <span id="pauseLabel">Pause</span>
           </button>
-          <button id="clearBtn" class="iconButton" type="button" title="Clear feed" aria-label="Clear feed">
+          <button id="clearBtn" class="controlButton dangerButton" type="button" title="Clear feed" aria-label="Clear feed">
             <span class="icon clearIcon" aria-hidden="true"></span>
+            <span>Clear</span>
           </button>
         </div>
       </header>
 
       <main class="layout">
         <section class="feedPanel">
-          <div class="buildStrip">
-            <strong id="buildLabel">Market Bubble desk:</strong>
-            <span id="buildCopy">Twitch + X + Kick into one source-labeled live feed for the room.</span>
+          <div class="deskHeader">
+            <div class="buildStrip">
+              <strong id="buildLabel">Market Bubble desk:</strong>
+              <span id="buildCopy">Twitch + X + Kick into one source-labeled live feed for the room.</span>
+            </div>
+            <div class="deskStats" aria-label="Desk metrics">
+              <div class="deskStat"><span>Live</span><strong id="visibleCount">0</strong></div>
+              <div class="deskStat"><span>Queued</span><strong id="queuedCount">0</strong></div>
+              <div class="deskStat"><span>Done</span><strong id="doneCount">0</strong></div>
+            </div>
           </div>
+
           <div id="contextRail" class="contextRail"></div>
 
           <div class="feedToolbar">
-            <div class="sourceToggles" role="group" aria-label="Source filters">
-              <button class="sourceToggle kick active" type="button" data-source="kick">
-                <span class="sourceGlyph">K</span>
-                <span>Kick</span>
-              </button>
-              <button class="sourceToggle x active" type="button" data-source="x">
-                <span class="sourceGlyph">X</span>
-                <span>X</span>
-              </button>
-              <button class="sourceToggle twitch active" type="button" data-source="twitch">
-                <span class="sourceGlyph twitchGlyph"></span>
-                <span>Twitch</span>
-              </button>
+            <div class="toolbarGroup">
+              <div class="toolbarLabel">Sources</div>
+              <div class="sourceToggles" role="group" aria-label="Source filters">
+                <button class="sourceToggle kick active" type="button" data-source="kick">
+                  <span class="sourceGlyph">K</span>
+                  <span>Kick</span>
+                </button>
+                <button class="sourceToggle x active" type="button" data-source="x">
+                  <span class="sourceGlyph">X</span>
+                  <span>X</span>
+                </button>
+                <button class="sourceToggle twitch active" type="button" data-source="twitch">
+                  <span class="sourceGlyph twitchGlyph"></span>
+                  <span>Twitch</span>
+                </button>
+              </div>
             </div>
+
+            <div class="toolbarGroup">
+              <div class="toolbarLabel">View</div>
+              <div class="viewToggles" role="group" aria-label="Message type filters">
+                <button class="viewToggle active" type="button" data-intent="all">All</button>
+                <button class="viewToggle" type="button" data-intent="question">Questions</button>
+                <button class="viewToggle" type="button" data-intent="market">Markets</button>
+                <button class="viewToggle" type="button" data-intent="clip">Clips</button>
+                <button class="viewToggle" type="button" data-intent="culture">Culture</button>
+              </div>
+            </div>
+
+            <div class="toolbarGroup compactControls">
+              <div class="toolbarLabel">Controls</div>
+              <button id="autoScrollBtn" class="toggleButton active" type="button">Auto-scroll</button>
+              <button id="densityBtn" class="toggleButton" type="button">Dense</button>
+            </div>
+
             <label class="searchBox">
               <span aria-hidden="true"></span>
-              <input id="searchInput" type="search" placeholder="Search live desk" autocomplete="off" />
+              <input id="searchInput" type="search" placeholder="Search names, markets, clips" autocomplete="off" />
             </label>
           </div>
 
+          <div id="activeFilterBar" class="activeFilterBar"></div>
           <div id="feed" class="feed" aria-live="polite"></div>
         </section>
 
         <aside class="sidePanel">
           <section class="panelBlock queueBlock">
             <div class="blockHeader">
-              <h2>Producer Queue</h2>
-              <button id="clearQueueBtn" class="miniButton" type="button">Clear</button>
+              <div>
+                <h2>Operator Queue</h2>
+                <div id="queueSummary" class="blockSubhead">0 open items</div>
+              </div>
+              <div class="headerButtons">
+                <button id="copyRundownBtn" class="miniButton" type="button">Copy Rundown</button>
+                <button id="clearDoneBtn" class="miniButton" type="button">Clear Done</button>
+              </div>
+            </div>
+            <div class="queueTabs" role="group" aria-label="Queue filters">
+              <button class="queueTab active" type="button" data-queue-filter="open">Open</button>
+              <button class="queueTab" type="button" data-queue-filter="question">Questions</button>
+              <button class="queueTab" type="button" data-queue-filter="signal">Signals</button>
+              <button class="queueTab" type="button" data-queue-filter="clip">Clips</button>
+              <button class="queueTab" type="button" data-queue-filter="done">Done</button>
             </div>
             <div id="producerQueue" class="producerQueue"></div>
           </section>
 
-          <section class="panelBlock">
-            <h2>Run Of Show</h2>
-            <div id="runOfShow" class="runOfShow"></div>
-          </section>
-
-          <section class="panelBlock">
-            <h2>Watchlist</h2>
-            <div id="watchlist" class="watchlist"></div>
+          <section class="panelBlock notesBlock">
+            <div class="blockHeader">
+              <div>
+                <h2>Show Notes</h2>
+                <div class="blockSubhead">Segments and watchlist</div>
+              </div>
+            </div>
+            <details open>
+              <summary>Run of show</summary>
+              <div id="runOfShow" class="runOfShow"></div>
+            </details>
+            <details>
+              <summary>Watchlist</summary>
+              <div id="watchlist" class="watchlist"></div>
+            </details>
           </section>
 
           <section class="panelBlock">
             <div class="blockHeader">
-              <h2>Sources</h2>
-              <span id="clientCount" class="smallPill">0 viewers</span>
+              <div>
+                <h2>Sources</h2>
+                <span id="clientCount" class="smallPill">0 viewers</span>
+              </div>
             </div>
             <div id="sourceStatus" class="sourceStatus"></div>
           </section>
 
-          <section class="panelBlock statsBlock">
-            <h2>Volume</h2>
-            <div class="metricGrid">
-              <div class="metric kick">
-                <span>Kick</span>
-                <strong id="kickCount">0</strong>
-              </div>
-              <div class="metric x">
-                <span>X</span>
-                <strong id="xCount">0</strong>
-              </div>
-              <div class="metric twitch">
-                <span>Twitch</span>
-                <strong id="twitchCount">0</strong>
-              </div>
-              <div class="metric">
-                <span>Total</span>
-                <strong id="totalCount">0</strong>
-              </div>
-            </div>
-          </section>
-
-          <section class="panelBlock">
-            <h2>Producer Pulse</h2>
+          <details class="panelBlock demoBlock">
+            <summary>Demo pulse</summary>
             <form id="testForm" class="testForm">
               <select id="testSource" aria-label="Test source">
                 <option value="kick">Kick</option>
@@ -120,7 +152,7 @@
               <textarea id="testText" rows="3" aria-label="Test message">Ask Ansem which market is most mispriced right now.</textarea>
               <button type="submit" class="primaryButton">Send Test</button>
             </form>
-          </section>
+          </details>
         </aside>
       </main>
     </div>
@@ -139,7 +171,8 @@
         <p class="messageText"></p>
         <time class="messageTime"></time>
         <div class="messageActions">
-          <button class="messageAction" type="button" data-action="question">Question</button>
+          <button class="messageAction primaryAction" type="button" data-action="smart">Queue</button>
+          <button class="messageAction" type="button" data-action="question">Ask</button>
           <button class="messageAction" type="button" data-action="signal">Signal</button>
           <button class="messageAction" type="button" data-action="clip">Clip</button>
           <button class="messageAction" type="button" data-action="copy">Copy</button>

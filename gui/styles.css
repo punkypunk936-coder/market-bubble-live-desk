@@ -145,20 +145,31 @@ h2 {
   box-shadow: 0 0 12px rgba(83, 252, 24, 0.78);
 }
 
-.iconButton {
-  width: 42px;
-  height: 42px;
-  display: grid;
-  place-items: center;
+.controlButton {
+  min-width: 92px;
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.04);
   color: var(--text);
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 800;
 }
 
-.iconButton:hover {
+.controlButton:hover {
   border-color: var(--line-strong);
   background: rgba(242, 198, 112, 0.08);
+}
+
+.dangerButton:hover {
+  border-color: rgba(255, 109, 97, 0.5);
+  background: rgba(255, 109, 97, 0.08);
+  color: #ffd4cf;
 }
 
 .icon {
@@ -238,13 +249,20 @@ h2 {
   min-height: calc(100vh - 130px);
 }
 
+.deskHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  border-bottom: 1px solid var(--line-strong);
+}
+
 .buildStrip {
-  min-height: 58px;
+  min-height: 72px;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
   padding: 16px 20px;
-  border-bottom: 1px solid var(--line-strong);
   color: var(--text);
   font-size: clamp(14px, 2.1vw, 19px);
 }
@@ -252,6 +270,37 @@ h2 {
 .buildStrip strong {
   color: var(--gold);
   text-transform: uppercase;
+}
+
+.deskStats {
+  display: grid;
+  grid-template-columns: repeat(3, 86px);
+  border-left: 1px solid rgba(242, 198, 112, 0.2);
+}
+
+.deskStat {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  min-height: 72px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.deskStat:first-child {
+  border-left: 0;
+}
+
+.deskStat span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.deskStat strong {
+  color: var(--gold-bright);
+  font-size: 24px;
+  line-height: 1.1;
 }
 
 .contextRail {
@@ -280,12 +329,24 @@ h2 {
 }
 
 .feedToolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(240px, auto) minmax(260px, auto) auto minmax(220px, 1fr);
+  align-items: end;
   gap: 12px;
   padding: 14px 18px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.toolbarGroup {
+  display: grid;
+  gap: 7px;
+}
+
+.toolbarLabel {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
 .sourceToggles {
@@ -295,7 +356,10 @@ h2 {
 }
 
 .sourceToggle,
-.sourceBadge {
+.sourceBadge,
+.viewToggle,
+.toggleButton,
+.queueTab {
   min-height: 42px;
   display: inline-flex;
   align-items: center;
@@ -307,12 +371,39 @@ h2 {
   background: rgba(255, 255, 255, 0.025);
 }
 
-.sourceToggle {
+.sourceToggle,
+.viewToggle,
+.toggleButton,
+.queueTab {
   opacity: 0.45;
 }
 
-.sourceToggle.active {
+.sourceToggle.active,
+.viewToggle.active,
+.toggleButton.active,
+.queueTab.active {
   opacity: 1;
+  border-color: var(--line-strong);
+  color: var(--gold-bright);
+  background: rgba(242, 198, 112, 0.08);
+}
+
+.viewToggles,
+.compactControls,
+.queueTabs,
+.headerButtons {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.viewToggle,
+.toggleButton,
+.queueTab {
+  padding: 0 11px;
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .sourceGlyph {
@@ -388,7 +479,7 @@ h2 {
 }
 
 .searchBox {
-  min-width: min(280px, 40vw);
+  min-width: min(300px, 40vw);
   height: 42px;
   display: flex;
   align-items: center;
@@ -427,8 +518,19 @@ h2 {
   color: var(--text);
 }
 
+.activeFilterBar {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.018);
+  font-size: 12px;
+}
+
 .feed {
-  height: calc(100vh - 300px);
+  height: calc(100vh - 340px);
   min-height: 520px;
   overflow: auto;
   padding: 18px;
@@ -539,7 +641,8 @@ h2 {
 }
 
 .messageAction,
-.miniButton {
+.miniButton,
+.queueButton {
   min-height: 30px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
@@ -551,9 +654,15 @@ h2 {
 }
 
 .messageAction:hover,
-.miniButton:hover {
+.miniButton:hover,
+.queueButton:hover {
   border-color: var(--line-strong);
   background: rgba(242, 198, 112, 0.08);
+  color: var(--gold-bright);
+}
+
+.primaryAction {
+  border-color: rgba(242, 198, 112, 0.36);
   color: var(--gold-bright);
 }
 
@@ -577,6 +686,12 @@ h2 {
   margin-bottom: 12px;
 }
 
+.blockSubhead {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .producerQueue,
 .runOfShow {
   display: grid;
@@ -588,6 +703,17 @@ h2 {
   border: 1px solid rgba(255, 255, 255, 0.09);
   background: rgba(0, 0, 0, 0.24);
   padding: 12px;
+}
+
+.queueItem.done {
+  opacity: 0.62;
+}
+
+.queueItem.done p,
+.queueItem.done strong {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  text-decoration-color: rgba(242, 198, 112, 0.4);
 }
 
 .queueItem.kick {
@@ -610,11 +736,23 @@ h2 {
   margin-bottom: 8px;
 }
 
+.queueActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .queueKind {
   color: var(--gold);
   font-size: 11px;
   font-weight: 900;
   text-transform: uppercase;
+}
+
+.queueButton {
+  min-height: 26px;
+  padding: 0 8px;
+  font-size: 11px;
 }
 
 .queueRemove {
@@ -659,6 +797,23 @@ h2 {
   font-size: 14px;
   line-height: 1.4;
   overflow-wrap: anywhere;
+}
+
+.notesBlock details,
+.demoBlock {
+  margin-top: 10px;
+}
+
+.notesBlock summary,
+.demoBlock > summary {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  color: var(--gold-bright);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
 .queueMeta,
@@ -784,9 +939,35 @@ h2 {
   font-size: 13px;
 }
 
+.denseMode .messageRow {
+  min-height: 58px;
+  padding: 9px 12px;
+  margin-bottom: 7px;
+}
+
+.denseMode .messageText {
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.denseMode .sourceBadge {
+  min-height: 34px;
+}
+
 @media (max-width: 1040px) {
   .layout {
     grid-template-columns: 1fr;
+  }
+
+  .deskHeader,
+  .feedToolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .deskStats {
+    grid-template-columns: repeat(3, 1fr);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-left: 0;
   }
 
   .sidePanel {
@@ -798,7 +979,7 @@ h2 {
   }
 
   .feed {
-    height: 58vh;
+    height: 56vh;
   }
 }
 
@@ -809,21 +990,22 @@ h2 {
   }
 
   .topbar,
-  .feedToolbar {
+  .feedToolbar,
+  .topActions {
     align-items: stretch;
     flex-direction: column;
   }
 
-  .topActions {
-    justify-content: space-between;
-  }
-
   .sourceToggles,
+  .viewToggles,
+  .compactControls,
   .searchBox {
     width: 100%;
   }
 
-  .sourceToggle {
+  .sourceToggle,
+  .viewToggle,
+  .toggleButton {
     flex: 1 1 120px;
     justify-content: center;
   }
@@ -851,5 +1033,13 @@ h2 {
 
   .feed {
     min-height: 460px;
+  }
+
+  .deskStats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .deskStat {
+    min-height: 58px;
   }
 }
