@@ -749,9 +749,106 @@ h2 {
 }
 
 .producerQueue,
-.runOfShow {
+.runOfShow,
+.radarList {
   display: grid;
   gap: 10px;
+}
+
+.radarItem {
+  width: 100%;
+  min-height: 62px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.24);
+  color: var(--text);
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.radarItem:hover,
+.radarItem.active {
+  border-color: var(--line-strong);
+  background: rgba(242, 198, 112, 0.08);
+}
+
+.radarItem strong,
+.focusTitle {
+  display: block;
+  color: var(--gold-bright);
+  font-size: 14px;
+}
+
+.radarItem small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.radarCounts {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+}
+
+.radarCounts b {
+  color: var(--gold-bright);
+  font-size: 24px;
+  line-height: 1;
+}
+
+.radarCounts em {
+  color: var(--muted);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.focusBrief {
+  margin-top: 12px;
+  border: 1px solid rgba(242, 198, 112, 0.18);
+  border-radius: 8px;
+  background: rgba(242, 198, 112, 0.045);
+  padding: 12px;
+}
+
+.focusBrief p {
+  margin-top: 6px;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.focusMeta {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.focusBrief blockquote {
+  margin: 10px 0 0;
+  border-left: 2px solid var(--line-strong);
+  padding-left: 10px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.focusCopyButton {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.focusCopyButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .queueItem,

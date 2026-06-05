@@ -11,6 +11,8 @@ Market Bubble is built around prediction-market discourse: digital culture, spor
 - Auto-tags messages as `Question`, `Market`, `Clip`, `Culture`, or `Chat`.
 - Scores messages against the Market Bubble watchlist and exposes a `High Signal` view.
 - Shows matched watchlist terms directly on rows and queued items.
+- Adds a `Signal Radar` that ranks active watchlist topics by recent heat, source mix, and high-signal count.
+- Generates a copyable focus brief with segment fit, source mix, sample message, and a suggested on-air move.
 - Lets producers queue items as on-air questions, market signals, or clip candidates.
 - Persists recent feed history and the operator queue to `data/operator-state.json` so a restart does not wipe the live rundown.
 - Shows per-source freshness so operators can see whether a source is live or stale.
@@ -48,9 +50,11 @@ Replace the Twitch/Kick channel names with the actual live channel slugs if they
 2. Use source toggles and search to narrow the room.
 3. Use the `View` controls to isolate questions, market signals, clip candidates, or culture chatter.
 4. Use `High Signal` when the room gets loud; it prioritizes watchlist hits and show-relevant questions.
-5. Click `Queue` for the app's best guess, or use `Ask`, `Signal`, and `Clip` to route a message manually.
-6. Work the Operator Queue: `Done` closes an item, `Reopen` brings it back, `Copy` copies one item, and `Copy Rundown` copies the open queue grouped by segment use.
-7. Use `Auto-scroll` when actively watching live flow, and turn it off when reviewing older messages. `Dense` compresses the feed for high-volume moments.
+5. Use `Signal Radar` to see which watchlist topics are heating up across sources. Click a radar item to focus the feed.
+6. Click `Copy Focus Brief` to hand a concise on-air prompt to the hosts or producer chat.
+7. Click `Queue` for the app's best guess, or use `Ask`, `Signal`, and `Clip` to route a message manually.
+8. Work the Operator Queue: `Done` closes an item, `Reopen` brings it back, `Copy` copies one item, and `Copy Rundown` copies the open queue grouped by segment use.
+9. Use `Auto-scroll` when actively watching live flow, and turn it off when reviewing older messages. `Dense` compresses the feed for high-volume moments.
 
 ## Deployment
 

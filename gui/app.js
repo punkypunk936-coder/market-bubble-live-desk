@@ -13,6 +13,8 @@ const state = {
   producerQueue: [],
   config: {},
   visibleCount: 0,
+  focusTerm: "",
+  radar: [],
 };
 
 const sourceNames = {
@@ -88,6 +90,16 @@ function priorityLabel(priority) {
   }[priority || "normal"] || "";
 }
 
+function messageTimeMs(message) {
+  const value = new Date(message.receivedAt || message.createdAt || 0).getTime();
+  return Number.isFinite(value) ? value : 0;
+}
+
+function messageMatchesTerm(message, term) {
+  const value = `${message.text || ""} ${(message.matchedTerms || []).join(" ")}`.toLowerCase();
+  return value.includes(String(term || "").toLowerCase());
+}
+
 function smartKindForMessage(message) {
   if (message.intent === "question") return "question";
   if (message.intent === "clip" || message.intent === "culture") return "clip";
@@ -110,8 +122,10 @@ function passesFilters(message) {
     return false;
   }
   const query = state.query.trim().toLowerCase();
+  const focus = state.focusTerm.trim().toLowerCase();
+  if (focus && !messageMatchesTerm(message, focus)) return false;
   if (!query) return true;
-  return [message.text, message.displayName, message.user, message.channel, message.sourceLabel, message.intent]
+  return [message.text, message.displayName, message.user, message.channel, message.sourceLabel, message.intent, ...(message.matchedTerms || [])]
     .filter(Boolean)
     .some((part) => String(part).toLowerCase().includes(query));
 }
@@ -186,6 +200,7 @@ function renderFeed() {
 function appendMessage(message) {
   state.messages.push(message);
   if (state.messages.length > 500) state.messages.splice(0, state.messages.length - 500);
+  renderRadar();
   if (state.paused) {
     state.queue.push(message);
     updateConnectionLight();
@@ -256,6 +271,113 @@ function renderConfig() {
   $("watchlist").innerHTML = (config.watchlist || [])
     .map((item) => `<span class="watchChip">${escapeHtml(item)}</span>`)
     .join("");
+}
+
+function segmentForTerm(term, sample) {
+  const value = `${term || ""} ${sample?.text || ""}`.toLowerCase();
+  if (/\b(gta|culture|viral|creator|banks|stream|twitter|x)\b/.test(value)) return "Culture Shock";
+  if (/\b(nba|nfl|mlb|ufc|sports|spread|line|game|match)\b/.test(value)) return "Pick n' Roll";
+  if (/\b(ai|compute|eth|solana|sol|hyperliquid|hype|crypto|ethereum)\b/.test(value)) return "Future-Proof";
+  return "The Price Is Wrong";
+}
+
+function suggestedPrompt(term, item) {
+  const segment = segmentForTerm(term, item?.sample);
+  if (segment === "Culture Shock") return `Ask whether ${term} is a real attention market or just timeline noise.`;
+  if (segment === "Pick n' Roll") return `Ask what number would make ${term} mispriced enough to take seriously.`;
+  if (segment === "Future-Proof") return `Ask how ${term} changes the long-term market structure or trade setup.`;
+  return `Ask where the market is wrong on ${term}, and what would move the odds.`;
+}
+
+function computeRadar() {
+  const now = Date.now();
+  const windowMs = 10 * 60 * 1000;
+  const recent = state.messages.filter((message) => now - messageTimeMs(message) <= windowMs);
+  const watchlist = state.config.watchlist || [];
+  const rows = watchlist
+    .map((term) => {
+      const hits = recent.filter((message) => messageMatchesTerm(message, term));
+      const allHits = state.messages.filter((message) => messageMatchesTerm(message, term));
+      const sourceCounts = hits.reduce((acc, message) => {
+        acc[message.source] = (acc[message.source] || 0) + 1;
+        return acc;
+      }, {});
+      const high = hits.filter((message) => message.priority === "high").length;
+      const sample = hits.find((message) => message.priority === "high") || hits[0] || allHits[allHits.length - 1] || null;
+      return {
+        term,
+        count: hits.length,
+        allCount: allHits.length,
+        high,
+        sourceCounts,
+        sample,
+        segment: segmentForTerm(term, sample),
+      };
+    })
+    .filter((item) => item.count > 0 || item.allCount > 0)
+    .sort((a, b) => (b.high - a.high) || (b.count - a.count) || (b.allCount - a.allCount))
+    .slice(0, 8);
+  state.radar = rows;
+  return rows;
+}
+
+function formatSources(sourceCounts) {
+  const parts = Object.entries(sourceCounts || {})
+    .filter(([, count]) => count > 0)
+    .map(([source, count]) => `${sourceNames[source] || source} ${count}`);
+  return parts.length ? parts.join(" · ") : "No recent source hits";
+}
+
+function formatFocusBrief(item) {
+  if (!item) return "No focused signal selected.";
+  const sample = item.sample ? formatForClipboard(item.sample) : "No sample message captured yet.";
+  return [
+    `Market Bubble focus: ${item.term}`,
+    `Segment fit: ${item.segment}`,
+    `Recent heat: ${item.count} mentions in the last 10 minutes, ${item.high} high-signal.`,
+    `Sources: ${formatSources(item.sourceCounts)}`,
+    `Suggested on-air move: ${suggestedPrompt(item.term, item)}`,
+    `Sample: ${sample}`,
+  ].join("\n");
+}
+
+function renderRadar() {
+  const rows = computeRadar();
+  const list = $("radarList");
+  const active = rows.find((item) => item.term === state.focusTerm) || rows[0] || null;
+  $("radarSummary").textContent = rows.length ? `${rows.length} active watchlist terms` : "No watchlist heat yet";
+  if (!rows.length) {
+    list.innerHTML = `<div class="emptyState compact">No watchlist terms are active in the recent feed.</div>`;
+    $("focusBrief").innerHTML = `<div class="emptyState compact">Select a radar item when signals appear.</div>`;
+    $("copyFocusBtn").disabled = true;
+    return;
+  }
+  list.innerHTML = rows
+    .map(
+      (item) => `
+        <button class="radarItem${item.term === state.focusTerm ? " active" : ""}" type="button" data-term="${escapeHtml(item.term)}">
+          <span>
+            <strong>${escapeHtml(item.term)}</strong>
+            <small>${escapeHtml(item.segment)} · ${escapeHtml(formatSources(item.sourceCounts))}</small>
+          </span>
+          <span class="radarCounts">
+            <b>${item.count}</b>
+            <em>${item.high} high</em>
+          </span>
+        </button>
+      `
+    )
+    .join("");
+  const briefItem = state.focusTerm ? rows.find((item) => item.term === state.focusTerm) : active;
+  $("focusBrief").innerHTML = briefItem
+    ? `
+      <div class="focusTitle">${escapeHtml(briefItem.term)} · ${escapeHtml(briefItem.segment)}</div>
+      <p>${escapeHtml(suggestedPrompt(briefItem.term, briefItem))}</p>
+      <div class="focusMeta">${escapeHtml(briefItem.count)} recent · ${escapeHtml(briefItem.high)} high-signal · ${escapeHtml(formatSources(briefItem.sourceCounts))}</div>
+      ${briefItem.sample ? `<blockquote>${escapeHtml(briefItem.sample.displayName || "unknown")}: ${escapeHtml(briefItem.sample.text)}</blockquote>` : ""}
+    `
+    : `<div class="emptyState compact">Select a radar item when signals appear.</div>`;
+  $("copyFocusBtn").disabled = !briefItem;
 }
 
 function queueKindLabel(kind) {
@@ -339,7 +461,8 @@ function renderActiveFilterBar() {
   const type = state.intentFilter === "all" ? "All message types" : state.intentFilter === "high" ? "High signal" : intentLabel(state.intentFilter);
   const highCount = state.messages.filter((message) => state.filters.has(message.source) && message.priority === "high").length;
   const query = state.query.trim() ? `Search: "${state.query.trim()}"` : "No search";
-  $("activeFilterBar").textContent = `${activeSources || "No sources"} · ${type} · ${query} · ${highCount} high-signal items`;
+  const focus = state.focusTerm ? `Focus: ${state.focusTerm}` : "No radar focus";
+  $("activeFilterBar").textContent = `${activeSources || "No sources"} · ${type} · ${query} · ${focus} · ${highCount} high-signal items`;
 }
 
 function applySnapshot(payload) {
@@ -349,6 +472,7 @@ function applySnapshot(payload) {
   state.producerQueue = payload.producerQueue || [];
   state.metrics = payload.metrics || state.metrics;
   renderConfig();
+  renderRadar();
   renderFeed();
   renderProducerQueue();
   renderSources();
@@ -366,6 +490,7 @@ function connectEvents() {
     state.producerQueue = payload.producerQueue || state.producerQueue;
     state.metrics = payload.metrics || state.metrics;
     renderConfig();
+    renderRadar();
     renderProducerQueue();
     renderSources();
     updateMetrics(state.metrics);
@@ -517,6 +642,33 @@ function bindControls() {
     await postJson("/api/queue/clear-done");
   });
 
+  $("radarList").addEventListener("click", (event) => {
+    const item = event.target.closest(".radarItem");
+    if (!item) return;
+    state.focusTerm = item.dataset.term || "";
+    state.query = "";
+    $("searchInput").value = "";
+    renderRadar();
+    renderFeed();
+  });
+
+  $("resetFocusBtn").addEventListener("click", () => {
+    state.focusTerm = "";
+    state.query = "";
+    $("searchInput").value = "";
+    renderRadar();
+    renderFeed();
+  });
+
+  $("copyFocusBtn").addEventListener("click", async () => {
+    const item = state.radar.find((row) => row.term === state.focusTerm) || state.radar[0];
+    await copyText(formatFocusBrief(item));
+    $("copyFocusBtn").textContent = "Copied";
+    setTimeout(() => {
+      $("copyFocusBtn").textContent = "Copy Focus Brief";
+    }, 900);
+  });
+
   $("copyRundownBtn").addEventListener("click", async () => {
     await copyText(formatRundown());
     $("copyRundownBtn").textContent = "Copied";
@@ -625,6 +777,8 @@ function bindControls() {
 
   $("searchInput").addEventListener("input", (event) => {
     state.query = event.target.value;
+    if (state.query.trim()) state.focusTerm = "";
+    renderRadar();
     renderFeed();
   });
 
@@ -642,6 +796,7 @@ function bindControls() {
 bindControls();
 connectEvents();
 setInterval(() => {
+  renderRadar();
   renderSources();
   updateMetrics();
 }, 30000);
