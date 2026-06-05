@@ -94,6 +94,25 @@
         </section>
 
         <aside class="sidePanel">
+          <section class="panelBlock assistBlock">
+            <div class="blockHeader">
+              <div>
+                <h2>Producer Assist</h2>
+                <div id="assistSubhead" class="blockSubhead">Current segment guidance</div>
+              </div>
+            </div>
+            <div id="nextMove" class="nextMove"></div>
+            <div class="assistStats" aria-label="Current segment status">
+              <div><span>Now</span><strong id="assistNowCount">0</strong></div>
+              <div><span>Parked</span><strong id="assistParkedCount">0</strong></div>
+              <div><span>Heat</span><strong id="assistHeatCount">0</strong></div>
+            </div>
+            <div class="assistActions">
+              <button id="triageModeBtn" class="miniButton" type="button">Triage Mode</button>
+              <button id="copySegmentBriefBtn" class="primaryButton" type="button">Copy Segment Brief</button>
+            </div>
+          </section>
+
           <section class="panelBlock radarBlock">
             <div class="blockHeader">
               <div>

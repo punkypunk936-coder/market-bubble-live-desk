@@ -774,6 +774,12 @@ h2 {
   padding: 16px;
 }
 
+.assistBlock {
+  background:
+    linear-gradient(180deg, rgba(242, 198, 112, 0.1), rgba(14, 12, 9, 0.92)),
+    var(--panel);
+}
+
 .blockHeader {
   display: flex;
   align-items: center;
@@ -793,6 +799,77 @@ h2 {
 .radarList {
   display: grid;
   gap: 10px;
+}
+
+.nextMove {
+  border: 1px solid rgba(242, 198, 112, 0.22);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.24);
+  padding: 12px;
+}
+
+.nextMoveLabel {
+  color: var(--gold-bright);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.nextMove p {
+  margin-top: 6px;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.42;
+  overflow-wrap: anywhere;
+}
+
+.nextMoveMeta {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.assistStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.assistStats div {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 10px;
+}
+
+.assistStats span {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.assistStats strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--gold-bright);
+  font-size: 24px;
+  line-height: 1;
+}
+
+.assistActions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.assistActions .primaryButton,
+.assistActions .miniButton {
+  width: 100%;
 }
 
 .radarItem {
@@ -959,6 +1036,8 @@ h2 {
 .queueActions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 6px;
 }
 
@@ -1316,6 +1395,10 @@ h2 {
   }
 
   .sidePanel {
+    grid-template-columns: 1fr;
+  }
+
+  .assistActions {
     grid-template-columns: 1fr;
   }
 

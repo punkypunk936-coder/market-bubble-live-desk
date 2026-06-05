@@ -415,6 +415,106 @@ function formatFocusBrief(item) {
   ].join("\n");
 }
 
+function openQueueItems() {
+  return (state.producerQueue || []).filter((item) => !item.done);
+}
+
+function topRadarForSegment() {
+  const rows = state.radar || [];
+  return rows.find((item) => item.inCurrentSegment) || rows[0] || null;
+}
+
+function queueKindCounts(items) {
+  return items.reduce((acc, item) => {
+    acc[item.kind] = (acc[item.kind] || 0) + 1;
+    return acc;
+  }, {});
+}
+
+function sourceSummary() {
+  return ["kick", "x", "twitch"]
+    .map((source) => {
+      const item = state.sources?.[source] || {};
+      const status = item.status || "idle";
+      return `${sourceNames[source]} ${status}${item.lastMessageAt ? `, last ${relativeAge(item.lastMessageAt)}` : ""}`;
+    })
+    .join("; ");
+}
+
+function producerNextMove() {
+  const activeSegment = currentSegmentName();
+  const openItems = openQueueItems();
+  const nowItems = openItems.filter((item) => segmentForMessage(item) === activeSegment);
+  const topQuestion = nowItems.find((item) => item.kind === "question");
+  const topClip = nowItems.find((item) => item.kind === "clip");
+  const topSignal = nowItems.find((item) => item.kind === "signal");
+  const radar = topRadarForSegment();
+
+  if (topQuestion) {
+    return {
+      label: "Ask this next",
+      body: `${topQuestion.displayName || "unknown"}: ${topQuestion.text}`,
+      detail: `${activeSegment} question already queued.`,
+    };
+  }
+  if (topSignal) {
+    return {
+      label: "Bring this market beat up",
+      body: `${topSignal.displayName || "unknown"}: ${topSignal.text}`,
+      detail: `${activeSegment} signal is ready for host handoff.`,
+    };
+  }
+  if (topClip) {
+    return {
+      label: "Mark this for clipping",
+      body: `${topClip.displayName || "unknown"}: ${topClip.text}`,
+      detail: `${activeSegment} clip candidate is waiting.`,
+    };
+  }
+  if (radar && radar.inCurrentSegment) {
+    return {
+      label: `Watch ${radar.term}`,
+      body: suggestedPrompt(radar.term, radar),
+      detail: `${radar.count} recent mentions across ${formatSources(radar.sourceCounts)}.`,
+    };
+  }
+  if (radar) {
+    return {
+      label: `Park ${radar.term}`,
+      body: suggestedPrompt(radar.term, radar),
+      detail: `Topic fits ${radar.segment}; current segment is ${activeSegment}.`,
+    };
+  }
+  return {
+    label: "Keep monitoring",
+    body: "No clear segment signal yet. Stay in all-feed mode until radar or queue pressure builds.",
+    detail: "Sources are connected when the status cards show live or demo.",
+  };
+}
+
+function renderProducerAssist() {
+  if (!$("nextMove")) return;
+  const activeSegment = currentSegmentName();
+  const openItems = openQueueItems();
+  const nowItems = openItems.filter((item) => segmentForMessage(item) === activeSegment);
+  const parkedTopicFit = openItems.filter((item) => segmentForMessage(item) !== activeSegment && topicSegmentForMessage(item) === activeSegment);
+  const heatCount = (state.radar || [])
+    .filter((item) => item.inCurrentSegment)
+    .reduce((total, item) => total + item.count, 0);
+  const counts = queueKindCounts(nowItems);
+  const move = producerNextMove();
+
+  $("assistSubhead").textContent = `${activeSegment} · ${openItems.length} open`;
+  $("assistNowCount").textContent = nowItems.length;
+  $("assistParkedCount").textContent = parkedTopicFit.length;
+  $("assistHeatCount").textContent = heatCount;
+  $("nextMove").innerHTML = `
+    <div class="nextMoveLabel">${escapeHtml(move.label)}</div>
+    <p>${escapeHtml(move.body)}</p>
+    <div class="nextMoveMeta">${escapeHtml(move.detail)}${nowItems.length ? ` · ${counts.question || 0} ask / ${counts.signal || 0} signal / ${counts.clip || 0} clip` : ""}</div>
+  `;
+}
+
 function renderRadar() {
   const rows = computeRadar();
   const list = $("radarList");
@@ -426,6 +526,7 @@ function renderRadar() {
     list.innerHTML = `<div class="emptyState compact">No watchlist terms are active in the recent feed.</div>`;
     $("focusBrief").innerHTML = `<div class="emptyState compact">Select a radar item when signals appear.</div>`;
     $("copyFocusBtn").disabled = true;
+    renderProducerAssist();
     return;
   }
   list.innerHTML = rows
@@ -454,6 +555,7 @@ function renderRadar() {
     `
     : `<div class="emptyState compact">Select a radar item when signals appear.</div>`;
   $("copyFocusBtn").disabled = !briefItem;
+  renderProducerAssist();
 }
 
 function queueKindLabel(kind) {
@@ -490,6 +592,7 @@ function renderProducerQueue() {
   $("queueSummary").textContent = `${open} open · ${segmentOpen} queued for ${activeSegment}${topicFitOpen ? ` · ${topicFitOpen} topic-fit parked` : ""} · ${done} done`;
   if (!items.length) {
     node.innerHTML = `<div class="emptyState compact">No ${state.queueFilter === "open" ? "open" : state.queueFilter} items.</div>`;
+    renderProducerAssist();
     return;
   }
   node.innerHTML = items
@@ -504,6 +607,8 @@ function renderProducerQueue() {
           <div class="queueTop">
             <span class="queueKind">${escapeHtml(queueKindLabel(item.kind))}${item.priority === "high" ? " · High signal" : ""}</span>
             <div class="queueActions">
+              ${!item.done && segment !== activeSegment ? `<button class="queueButton" type="button" data-queue-action="use-now" data-queue-id="${item.id}">Use Now</button>` : ""}
+              ${!item.done && topicMismatch ? `<button class="queueButton" type="button" data-queue-action="park-topic" data-queue-id="${item.id}">Park Topic</button>` : ""}
               <button class="queueButton" type="button" data-queue-action="done" data-queue-id="${item.id}">${item.done ? "Reopen" : "Done"}</button>
               <button class="queueButton" type="button" data-queue-action="copy" data-queue-id="${item.id}">Copy</button>
               <button class="queueRemove" type="button" data-queue-action="remove" data-queue-id="${item.id}" aria-label="Remove queued item"></button>
@@ -520,6 +625,7 @@ function renderProducerQueue() {
       }
     )
     .join("");
+  renderProducerAssist();
 }
 
 function updateMetrics(payload) {
@@ -732,6 +838,33 @@ function formatRundown() {
   return [`Market Bubble Live Desk rundown`, `Current segment: ${activeSegment}`, "", sections].join("\n");
 }
 
+function formatSegmentBrief() {
+  const activeSegment = currentSegmentName();
+  const openItems = openQueueItems();
+  const nowItems = openItems.filter((item) => segmentForMessage(item) === activeSegment);
+  const parkedTopicFit = openItems.filter((item) => segmentForMessage(item) !== activeSegment && topicSegmentForMessage(item) === activeSegment);
+  const radar = topRadarForSegment();
+  const move = producerNextMove();
+  const counts = queueKindCounts(nowItems);
+  const queueLines = nowItems.slice(0, 5).map((item, index) => `${index + 1}. ${formatQueueItem(item)}`);
+  const parkedLines = parkedTopicFit.slice(0, 3).map((item, index) => `${index + 1}. ${formatQueueItem(item)}`);
+
+  return [
+    "Market Bubble segment brief",
+    `Current segment: ${activeSegment}`,
+    `Next move: ${move.label} — ${move.body}`,
+    `Why: ${move.detail}`,
+    radar
+      ? `Radar: ${radar.term} · ${radar.count} recent · ${radar.high} high-signal · ${radar.segment}`
+      : "Radar: no active watchlist heat",
+    `Queue now: ${nowItems.length} open · ${counts.question || 0} questions · ${counts.signal || 0} signals · ${counts.clip || 0} clips`,
+    `Source health: ${sourceSummary()}`,
+    "",
+    nowItems.length ? `Queued for ${activeSegment}\n${queueLines.join("\n")}` : `Queued for ${activeSegment}\nNone yet.`,
+    parkedLines.length ? `\nParked but topic-fit for ${activeSegment}\n${parkedLines.join("\n")}` : "",
+  ].filter((line) => line !== "").join("\n");
+}
+
 function bindControls() {
   $("pauseBtn").addEventListener("click", () => {
     state.paused = !state.paused;
@@ -769,6 +902,30 @@ function bindControls() {
     renderFeed();
     renderProducerQueue();
     updateMetrics();
+  });
+
+  $("triageModeBtn").addEventListener("click", () => {
+    state.intentFilter = "high";
+    state.segmentLens = true;
+    state.focusTerm = "";
+    state.query = "";
+    $("searchInput").value = "";
+    $("segmentLensBtn").classList.add("active");
+    document.querySelectorAll(".viewToggle").forEach((item) => {
+      item.classList.toggle("active", item.dataset.intent === "high");
+    });
+    renderRadar();
+    renderFeed();
+    renderProducerQueue();
+    updateMetrics();
+  });
+
+  $("copySegmentBriefBtn").addEventListener("click", async () => {
+    await copyText(formatSegmentBrief());
+    $("copySegmentBriefBtn").textContent = "Copied";
+    setTimeout(() => {
+      $("copySegmentBriefBtn").textContent = "Copy Segment Brief";
+    }, 900);
   });
 
   $("clearBtn").addEventListener("click", async () => {
@@ -889,6 +1046,20 @@ function bindControls() {
       renderProducerQueue();
       updateMetrics();
       await postJson("/api/queue/update", { queueId, done: item.done });
+      return;
+    }
+    if (button.dataset.queueAction === "use-now") {
+      item.segment = currentSegmentName();
+      renderProducerQueue();
+      updateMetrics();
+      await postJson("/api/queue/update", { queueId, segment: item.segment });
+      return;
+    }
+    if (button.dataset.queueAction === "park-topic") {
+      item.segment = topicSegmentForMessage(item);
+      renderProducerQueue();
+      updateMetrics();
+      await postJson("/api/queue/update", { queueId, segment: item.segment });
       return;
     }
     if (button.dataset.queueAction === "copy") {

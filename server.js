@@ -480,6 +480,12 @@ async function handleApi(req, res, pathname) {
       return;
     }
     if (typeof body.done === "boolean") item.done = body.done;
+    if (typeof body.segment === "string") {
+      item.segment = normalizeSegmentName(body.segment, item.segment || state.showState.currentSegment);
+    }
+    if (typeof body.topicSegment === "string") {
+      item.topicSegment = normalizeSegmentName(body.topicSegment, item.topicSegment || item.segment);
+    }
     item.updatedAt = new Date().toISOString();
     broadcast("queue", { producerQueue: state.producerQueue, metrics: metrics() });
     jsonResponse(res, 200, { ok: true, item });
