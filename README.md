@@ -4,6 +4,8 @@ Internal live production desk for Market Bubble: one real-time, source-labeled f
 
 Market Bubble is built around prediction-market discourse: digital culture, sports, crypto, tech, attention, and speculation. This desk is meant for the room during live recording, not as a generic chat toy.
 
+For a plain-English business pitch, see [PRODUCT_BRIEF.md](PRODUCT_BRIEF.md).
+
 ## What It Does
 
 - Merges Twitch, X filtered-stream posts, and Kick chat into one feed.
