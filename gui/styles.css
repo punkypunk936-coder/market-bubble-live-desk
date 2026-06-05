@@ -307,11 +307,51 @@ h2 {
   min-height: 46px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 12px;
   padding: 10px 18px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(0, 0, 0, 0.18);
+}
+
+.segmentMode {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  min-width: min(100%, 560px);
+}
+
+.segmentButtons,
+.contextChips {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.contextChips {
+  justify-content: flex-end;
+  flex: 1 1 280px;
+}
+
+.segmentButton {
+  min-height: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--muted);
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.segmentButton:hover,
+.segmentButton.active {
+  border-color: var(--line-strong);
+  background: rgba(242, 198, 112, 0.08);
+  color: var(--gold-bright);
 }
 
 .contextChip,
@@ -771,7 +811,8 @@ h2 {
 }
 
 .radarItem:hover,
-.radarItem.active {
+.radarItem.active,
+.radarItem.segmentFit {
   border-color: var(--line-strong);
   background: rgba(242, 198, 112, 0.08);
 }
@@ -789,6 +830,21 @@ h2 {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.35;
+}
+
+.segmentFitBadge {
+  display: inline-flex;
+  min-height: 18px;
+  align-items: center;
+  border: 1px solid rgba(242, 198, 112, 0.34);
+  border-radius: 8px;
+  padding: 0 6px;
+  color: var(--gold-bright);
+  background: rgba(242, 198, 112, 0.08);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
 .radarCounts {
@@ -881,6 +937,12 @@ h2 {
   border-color: rgba(143, 80, 255, 0.28);
 }
 
+.queueItem.segmentCurrent,
+.segmentItem.active {
+  border-color: rgba(242, 198, 112, 0.38);
+  background: rgba(242, 198, 112, 0.055);
+}
+
 .queueTop {
   display: flex;
   align-items: center;
@@ -967,6 +1029,23 @@ h2 {
   background: rgba(242, 198, 112, 0.055);
   font-size: 11px;
   font-weight: 800;
+}
+
+.queueSegment {
+  width: max-content;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  margin-top: 8px;
+  border: 1px solid rgba(242, 198, 112, 0.24);
+  border-radius: 8px;
+  padding: 0 8px;
+  color: var(--gold-bright);
+  background: rgba(242, 198, 112, 0.06);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
 .notesBlock details,
@@ -1183,13 +1262,16 @@ h2 {
   .sourceToggles,
   .viewToggles,
   .compactControls,
-  .searchBox {
+  .searchBox,
+  .segmentMode,
+  .contextChips {
     width: 100%;
   }
 
   .sourceToggle,
   .viewToggle,
-  .toggleButton {
+  .toggleButton,
+  .segmentButton {
     flex: 1 1 120px;
     justify-content: center;
   }

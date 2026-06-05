@@ -65,10 +65,33 @@ const appConfig = {
     : ["Polymarket", "Bullpen", "HYPE", "HyperLiquid", "Ethereum", "Solana", "GTA 6", "AI compute"],
 };
 
+function configuredSegmentNames() {
+  return appConfig.segments.map((segment) => segment.name).filter(Boolean);
+}
+
+function normalizeSegmentName(value, fallback = appConfig.segments[0]?.name || "") {
+  const requested = String(value || "").trim().toLowerCase();
+  const match = configuredSegmentNames().find((name) => name.toLowerCase() === requested);
+  return match || fallback;
+}
+
+function segmentForText(text, terms = []) {
+  const normalizedTerms = Array.isArray(terms) ? terms : [terms].filter(Boolean);
+  const value = `${text || ""} ${normalizedTerms.join(" ")}`.toLowerCase();
+  if (/\b(gta|culture|viral|creator|banks|stream|twitter|x|timeline|attention)\b/.test(value)) return "Culture Shock";
+  if (/\b(nba|nfl|mlb|ufc|sports|spread|line|game|match|baseball|bullpen)\b/.test(value)) return "Pick n' Roll";
+  if (/\b(ai|compute|eth|ethereum|solana|sol|hyperliquid|hype|crypto|btc|frontier)\b/.test(value)) return "Future-Proof";
+  return "The Price Is Wrong";
+}
+
 const state = {
   bootedAt: new Date().toISOString(),
   history: [],
   producerQueue: [],
+  showState: {
+    currentSegment: appConfig.segments[0]?.name || "",
+    updatedAt: new Date().toISOString(),
+  },
   clients: new Set(),
   seen: new Map(),
   counts: { twitch: 0, x: 0, kick: 0, system: 0 },
@@ -134,10 +157,11 @@ function schedulePersist() {
     try {
       fs.mkdirSync(DATA_DIR, { recursive: true });
       const payload = {
-        version: 1,
+        version: 2,
         savedAt: new Date().toISOString(),
         history: state.history.slice(-HISTORY_LIMIT),
         producerQueue: state.producerQueue.slice(0, 80),
+        showState: state.showState,
       };
       const tmp = `${STATE_FILE}.tmp`;
       fs.writeFileSync(tmp, JSON.stringify(payload, null, 2));
@@ -153,7 +177,18 @@ function loadRuntimeState() {
     if (!fs.existsSync(STATE_FILE)) return;
     const payload = JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
     state.history = Array.isArray(payload.history) ? payload.history.slice(-HISTORY_LIMIT) : [];
-    state.producerQueue = Array.isArray(payload.producerQueue) ? payload.producerQueue.slice(0, 80) : [];
+    state.producerQueue = Array.isArray(payload.producerQueue)
+      ? payload.producerQueue.slice(0, 80).map((item) => ({
+        ...item,
+        segment: normalizeSegmentName(item.segment || segmentForText(item.text, item.matchedTerms || [])),
+      }))
+      : [];
+    if (payload.showState && typeof payload.showState === "object") {
+      state.showState = {
+        currentSegment: normalizeSegmentName(payload.showState.currentSegment || state.showState.currentSegment),
+        updatedAt: payload.showState.updatedAt || state.showState.updatedAt,
+      };
+    }
     recomputeCounts();
     restoreSeenKeys();
   } catch (error) {
@@ -207,6 +242,7 @@ function matchedWatchTerms(text) {
 
 function scoreMessage({ source, text, intent }) {
   const matchedTerms = matchedWatchTerms(text);
+  const segment = segmentForText(text, matchedTerms);
   let score = 0;
   if (intent === "question") score += 3;
   if (intent === "market") score += 3;
@@ -216,7 +252,7 @@ function scoreMessage({ source, text, intent }) {
   score += Math.min(matchedTerms.length * 2, 6);
   if (/\b(banks|ansem|polymarket|bullpen)\b/i.test(text || "")) score += 2;
   const priority = score >= 6 ? "high" : score >= 3 ? "medium" : "normal";
-  return { score, priority, matchedTerms };
+  return { score, priority, matchedTerms, segment };
 }
 
 function pushMessage(input) {
@@ -247,6 +283,7 @@ function pushMessage(input) {
     signalScore: signal.score,
     priority: signal.priority,
     matchedTerms: signal.matchedTerms,
+    segment: input.segment || signal.segment,
     meta: input.meta || {},
   };
 
@@ -276,6 +313,7 @@ function metrics() {
 function publicState() {
   return {
     config: appConfig,
+    showState: state.showState,
     sources: state.sources,
     producerQueue: state.producerQueue,
     metrics: metrics(),
@@ -378,12 +416,14 @@ async function handleApi(req, res, pathname) {
       priority: snapshot.priority || "normal",
       matchedTerms: Array.isArray(snapshot.matchedTerms) ? snapshot.matchedTerms.slice(0, 6) : [],
       signalScore: Number(snapshot.signalScore || 0),
+      segment: snapshot.segment || segmentForText(snapshot.text, snapshot.matchedTerms || []),
     } : null);
     if (!message) {
       jsonResponse(res, 404, { ok: false, error: "Message not found." });
       return;
     }
     const kind = ["question", "signal", "clip"].includes(body.kind) ? body.kind : "signal";
+    const segment = normalizeSegmentName(body.segment || message.segment || state.showState.currentSegment);
     const queueId = hashId(["queue", kind, message.id]);
     const existingIndex = state.producerQueue.findIndex((item) => item.id === queueId);
     const queueItem = {
@@ -400,6 +440,7 @@ async function handleApi(req, res, pathname) {
       priority: message.priority,
       matchedTerms: message.matchedTerms || [],
       signalScore: message.signalScore || 0,
+      segment,
       queuedAt: new Date().toISOString(),
       done: false,
     };
@@ -408,6 +449,22 @@ async function handleApi(req, res, pathname) {
     if (state.producerQueue.length > 80) state.producerQueue.splice(80);
     broadcast("queue", { producerQueue: state.producerQueue, metrics: metrics() });
     jsonResponse(res, 200, { ok: true, item: queueItem });
+    schedulePersist();
+    return;
+  }
+  if (req.method === "POST" && pathname === "/api/show-state/update") {
+    const body = await readRequestBody(req);
+    const currentSegment = normalizeSegmentName(body.currentSegment || body.segment, "");
+    if (!currentSegment) {
+      jsonResponse(res, 400, { ok: false, error: "Unknown segment." });
+      return;
+    }
+    state.showState = {
+      currentSegment,
+      updatedAt: new Date().toISOString(),
+    };
+    broadcast("show-state", publicState());
+    jsonResponse(res, 200, { ok: true, showState: state.showState });
     schedulePersist();
     return;
   }

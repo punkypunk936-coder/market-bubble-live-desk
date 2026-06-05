@@ -12,6 +12,7 @@ const state = {
   sources: {},
   producerQueue: [],
   config: {},
+  showState: { currentSegment: "" },
   visibleCount: 0,
   focusTerm: "",
   radar: [],
@@ -98,6 +99,26 @@ function messageTimeMs(message) {
 function messageMatchesTerm(message, term) {
   const value = `${message.text || ""} ${(message.matchedTerms || []).join(" ")}`.toLowerCase();
   return value.includes(String(term || "").toLowerCase());
+}
+
+function segmentNames() {
+  return (state.config.segments || []).map((segment) => segment.name).filter(Boolean);
+}
+
+function normalizeSegment(value, fallback = "") {
+  const requested = String(value || "").trim().toLowerCase();
+  const match = segmentNames().find((name) => name.toLowerCase() === requested);
+  return match || fallback;
+}
+
+function currentSegmentName() {
+  const names = segmentNames();
+  return normalizeSegment(state.showState?.currentSegment, names[0] || "");
+}
+
+function queueTimeMs(item) {
+  const value = new Date(item.queuedAt || item.createdAt || 0).getTime();
+  return Number.isFinite(value) ? value : 0;
 }
 
 function smartKindForMessage(message) {
@@ -255,13 +276,37 @@ function renderConfig() {
   $("buildLabel").textContent = config.buildLabel || "Market Bubble desk:";
   $("buildCopy").textContent = config.buildCopy || "Twitch + X + Kick into one source-labeled live feed for the room.";
 
-  $("contextRail").innerHTML = (config.context || [])
+  const activeSegment = currentSegmentName();
+  const segments = config.segments || [];
+  const segmentControls = segments.length
+    ? `
+      <div class="segmentMode" aria-label="Segment mode">
+        <span class="toolbarLabel">Segment Mode</span>
+        <div class="segmentButtons" role="group" aria-label="Current show segment">
+          ${segments
+            .map((segment) => `
+              <button
+                class="segmentButton${segment.name === activeSegment ? " active" : ""}"
+                type="button"
+                data-segment="${escapeHtml(segment.name)}"
+                title="${escapeHtml(segment.brief || segment.name)}"
+              >
+                ${escapeHtml(segment.name)}
+              </button>
+            `)
+            .join("")}
+        </div>
+      </div>
+    `
+    : "";
+  const contextChips = (config.context || [])
     .map((item) => `<span class="contextChip">${escapeHtml(item)}</span>`)
     .join("");
+  $("contextRail").innerHTML = `${segmentControls}<div class="contextChips">${contextChips}</div>`;
   $("runOfShow").innerHTML = (config.segments || [])
     .map(
       (segment) => `
-        <div class="segmentItem">
+        <div class="segmentItem${segment.name === activeSegment ? " active" : ""}">
           <strong>${escapeHtml(segment.name)}</strong>
           <span>${escapeHtml(segment.brief)}</span>
         </div>
@@ -281,8 +326,16 @@ function segmentForTerm(term, sample) {
   return "The Price Is Wrong";
 }
 
+function segmentForMessage(message) {
+  const matchedTerms = Array.isArray(message?.matchedTerms) ? message.matchedTerms : [];
+  return normalizeSegment(
+    message?.segment,
+    segmentForTerm(matchedTerms[0] || "", message)
+  );
+}
+
 function suggestedPrompt(term, item) {
-  const segment = segmentForTerm(term, item?.sample);
+  const segment = item?.segment || segmentForTerm(term, item?.sample);
   if (segment === "Culture Shock") return `Ask whether ${term} is a real attention market or just timeline noise.`;
   if (segment === "Pick n' Roll") return `Ask what number would make ${term} mispriced enough to take seriously.`;
   if (segment === "Future-Proof") return `Ask how ${term} changes the long-term market structure or trade setup.`;
@@ -294,6 +347,7 @@ function computeRadar() {
   const windowMs = 10 * 60 * 1000;
   const recent = state.messages.filter((message) => now - messageTimeMs(message) <= windowMs);
   const watchlist = state.config.watchlist || [];
+  const activeSegment = currentSegmentName();
   const rows = watchlist
     .map((term) => {
       const hits = recent.filter((message) => messageMatchesTerm(message, term));
@@ -304,6 +358,8 @@ function computeRadar() {
       }, {});
       const high = hits.filter((message) => message.priority === "high").length;
       const sample = hits.find((message) => message.priority === "high") || hits[0] || allHits[allHits.length - 1] || null;
+      const segment = normalizeSegment(sample?.segment, segmentForTerm(term, sample));
+      const inCurrentSegment = segment === activeSegment;
       return {
         term,
         count: hits.length,
@@ -311,11 +367,13 @@ function computeRadar() {
         high,
         sourceCounts,
         sample,
-        segment: segmentForTerm(term, sample),
+        segment,
+        inCurrentSegment,
+        radarScore: high * 5 + hits.length * 3 + Math.min(allHits.length, 8) + (inCurrentSegment ? 6 : 0),
       };
     })
     .filter((item) => item.count > 0 || item.allCount > 0)
-    .sort((a, b) => (b.high - a.high) || (b.count - a.count) || (b.allCount - a.allCount))
+    .sort((a, b) => (b.radarScore - a.radarScore) || (b.high - a.high) || (b.count - a.count) || (b.allCount - a.allCount))
     .slice(0, 8);
   state.radar = rows;
   return rows;
@@ -331,9 +389,15 @@ function formatSources(sourceCounts) {
 function formatFocusBrief(item) {
   if (!item) return "No focused signal selected.";
   const sample = item.sample ? formatForClipboard(item.sample) : "No sample message captured yet.";
+  const activeSegment = currentSegmentName();
+  const timing = item.segment === activeSegment
+    ? `Use now in ${activeSegment}.`
+    : `Park for ${item.segment}; current segment is ${activeSegment}.`;
   return [
     `Market Bubble focus: ${item.term}`,
-    `Segment fit: ${item.segment}`,
+    `Current segment: ${activeSegment}`,
+    `Topic segment: ${item.segment}`,
+    `Timing note: ${timing}`,
     `Recent heat: ${item.count} mentions in the last 10 minutes, ${item.high} high-signal.`,
     `Sources: ${formatSources(item.sourceCounts)}`,
     `Suggested on-air move: ${suggestedPrompt(item.term, item)}`,
@@ -345,7 +409,9 @@ function renderRadar() {
   const rows = computeRadar();
   const list = $("radarList");
   const active = rows.find((item) => item.term === state.focusTerm) || rows[0] || null;
-  $("radarSummary").textContent = rows.length ? `${rows.length} active watchlist terms` : "No watchlist heat yet";
+  const activeSegment = currentSegmentName();
+  const segmentHits = rows.filter((item) => item.inCurrentSegment).length;
+  $("radarSummary").textContent = rows.length ? `${activeSegment} lens · ${segmentHits}/${rows.length} segment-fit terms` : "No watchlist heat yet";
   if (!rows.length) {
     list.innerHTML = `<div class="emptyState compact">No watchlist terms are active in the recent feed.</div>`;
     $("focusBrief").innerHTML = `<div class="emptyState compact">Select a radar item when signals appear.</div>`;
@@ -355,10 +421,10 @@ function renderRadar() {
   list.innerHTML = rows
     .map(
       (item) => `
-        <button class="radarItem${item.term === state.focusTerm ? " active" : ""}" type="button" data-term="${escapeHtml(item.term)}">
+        <button class="radarItem${item.term === state.focusTerm ? " active" : ""}${item.inCurrentSegment ? " segmentFit" : ""}" type="button" data-term="${escapeHtml(item.term)}">
           <span>
             <strong>${escapeHtml(item.term)}</strong>
-            <small>${escapeHtml(item.segment)} · ${escapeHtml(formatSources(item.sourceCounts))}</small>
+            <small>${item.inCurrentSegment ? `<em class="segmentFitBadge">Now</em> ` : ""}${escapeHtml(item.segment)} · ${escapeHtml(formatSources(item.sourceCounts))}</small>
           </span>
           <span class="radarCounts">
             <b>${item.count}</b>
@@ -371,7 +437,7 @@ function renderRadar() {
   const briefItem = state.focusTerm ? rows.find((item) => item.term === state.focusTerm) : active;
   $("focusBrief").innerHTML = briefItem
     ? `
-      <div class="focusTitle">${escapeHtml(briefItem.term)} · ${escapeHtml(briefItem.segment)}</div>
+      <div class="focusTitle">${escapeHtml(briefItem.term)} · ${escapeHtml(briefItem.segment)}${briefItem.inCurrentSegment ? " · Now" : ""}</div>
       <p>${escapeHtml(suggestedPrompt(briefItem.term, briefItem))}</p>
       <div class="focusMeta">${escapeHtml(briefItem.count)} recent · ${escapeHtml(briefItem.high)} high-signal · ${escapeHtml(formatSources(briefItem.sourceCounts))}</div>
       ${briefItem.sample ? `<blockquote>${escapeHtml(briefItem.sample.displayName || "unknown")}: ${escapeHtml(briefItem.sample.text)}</blockquote>` : ""}
@@ -390,9 +456,17 @@ function queueKindLabel(kind) {
 
 function filteredQueueItems() {
   const items = state.producerQueue || [];
-  if (state.queueFilter === "open") return items.filter((item) => !item.done);
-  if (state.queueFilter === "done") return items.filter((item) => item.done);
-  return items.filter((item) => !item.done && item.kind === state.queueFilter);
+  const filtered = state.queueFilter === "open"
+    ? items.filter((item) => !item.done)
+    : state.queueFilter === "done"
+      ? items.filter((item) => item.done)
+      : items.filter((item) => !item.done && item.kind === state.queueFilter);
+  const activeSegment = currentSegmentName();
+  return [...filtered].sort((a, b) => {
+    const aCurrent = segmentForMessage(a) === activeSegment ? 1 : 0;
+    const bCurrent = segmentForMessage(b) === activeSegment ? 1 : 0;
+    return (bCurrent - aCurrent) || (queueTimeMs(b) - queueTimeMs(a));
+  });
 }
 
 function renderProducerQueue() {
@@ -400,7 +474,9 @@ function renderProducerQueue() {
   const items = filteredQueueItems();
   const open = (state.producerQueue || []).filter((item) => !item.done).length;
   const done = (state.producerQueue || []).filter((item) => item.done).length;
-  $("queueSummary").textContent = `${open} open · ${done} done`;
+  const activeSegment = currentSegmentName();
+  const segmentOpen = (state.producerQueue || []).filter((item) => !item.done && segmentForMessage(item) === activeSegment).length;
+  $("queueSummary").textContent = `${open} open · ${segmentOpen} in ${activeSegment} · ${done} done`;
   if (!items.length) {
     node.innerHTML = `<div class="emptyState compact">No ${state.queueFilter === "open" ? "open" : state.queueFilter} items.</div>`;
     return;
@@ -408,8 +484,10 @@ function renderProducerQueue() {
   node.innerHTML = items
     .slice(0, 18)
     .map(
-      (item) => `
-        <article class="queueItem ${item.source}${item.done ? " done" : ""}">
+      (item) => {
+        const segment = segmentForMessage(item);
+        return `
+        <article class="queueItem ${item.source}${item.done ? " done" : ""}${segment === activeSegment ? " segmentCurrent" : ""}">
           <div class="queueTop">
             <span class="queueKind">${escapeHtml(queueKindLabel(item.kind))}${item.priority === "high" ? " · High signal" : ""}</span>
             <div class="queueActions">
@@ -420,10 +498,12 @@ function renderProducerQueue() {
           </div>
           <strong>${escapeHtml(item.displayName || "unknown")}</strong>
           <p>${escapeHtml(item.text)}</p>
+          <div class="queueSegment">${segment === activeSegment ? "Now" : "Park"} · ${escapeHtml(segment)}</div>
           ${(item.matchedTerms || []).length ? `<div class="queueTerms">${item.matchedTerms.map((term) => `<span>${escapeHtml(term)}</span>`).join("")}</div>` : ""}
           <div class="queueMeta">${escapeHtml(item.sourceLabel || item.source)}${item.channel ? ` · #${escapeHtml(item.channel)}` : ""} · ${escapeHtml(formatTime(item.createdAt))}</div>
         </article>
-      `
+      `;
+      }
     )
     .join("");
 }
@@ -462,13 +542,14 @@ function renderActiveFilterBar() {
   const highCount = state.messages.filter((message) => state.filters.has(message.source) && message.priority === "high").length;
   const query = state.query.trim() ? `Search: "${state.query.trim()}"` : "No search";
   const focus = state.focusTerm ? `Focus: ${state.focusTerm}` : "No radar focus";
-  $("activeFilterBar").textContent = `${activeSources || "No sources"} · ${type} · ${query} · ${focus} · ${highCount} high-signal items`;
+  $("activeFilterBar").textContent = `${activeSources || "No sources"} · ${type} · Segment: ${currentSegmentName()} · ${query} · ${focus} · ${highCount} high-signal items`;
 }
 
 function applySnapshot(payload) {
   state.messages = Array.isArray(payload.history) ? payload.history : [];
   state.sources = payload.sources || {};
   state.config = payload.config || {};
+  state.showState = payload.showState || state.showState;
   state.producerQueue = payload.producerQueue || [];
   state.metrics = payload.metrics || state.metrics;
   renderConfig();
@@ -487,6 +568,7 @@ function connectEvents() {
     const payload = JSON.parse(event.data);
     state.sources = payload.sources || {};
     state.config = payload.config || state.config;
+    state.showState = payload.showState || state.showState;
     state.producerQueue = payload.producerQueue || state.producerQueue;
     state.metrics = payload.metrics || state.metrics;
     renderConfig();
@@ -499,6 +581,18 @@ function connectEvents() {
     const payload = JSON.parse(event.data);
     state.producerQueue = payload.producerQueue || [];
     state.metrics = payload.metrics || state.metrics;
+    renderProducerQueue();
+    renderFeed();
+    updateMetrics(state.metrics);
+  });
+  events.addEventListener("show-state", (event) => {
+    const payload = JSON.parse(event.data);
+    state.showState = payload.showState || state.showState;
+    state.config = payload.config || state.config;
+    state.producerQueue = payload.producerQueue || state.producerQueue;
+    state.metrics = payload.metrics || state.metrics;
+    renderConfig();
+    renderRadar();
     renderProducerQueue();
     renderFeed();
     updateMetrics(state.metrics);
@@ -529,6 +623,7 @@ function queueMessage(messageId, kind) {
   return postJson("/api/queue/add", {
     messageId,
     kind,
+    segment: currentSegmentName(),
     message: message ? {
       id: message.id,
       source: message.source,
@@ -543,6 +638,7 @@ function queueMessage(messageId, kind) {
       priority: message.priority,
       matchedTerms: message.matchedTerms || [],
       signalScore: message.signalScore || 0,
+      segment: message.segment,
     } : null,
   });
 }
@@ -576,25 +672,41 @@ function formatForClipboard(message) {
 }
 
 function formatQueueItem(item) {
-  return `[${queueKindLabel(item.kind)} · ${item.sourceLabel || item.source}${item.channel ? ` #${item.channel}` : ""}] ${item.displayName || "unknown"}: ${item.text}`;
+  return `[${segmentForMessage(item)} · ${queueKindLabel(item.kind)} · ${item.sourceLabel || item.source}${item.channel ? ` #${item.channel}` : ""}] ${item.displayName || "unknown"}: ${item.text}`;
 }
 
 function formatRundown() {
   const openItems = (state.producerQueue || []).filter((item) => !item.done);
   if (!openItems.length) return "Market Bubble Live Desk rundown: no open queued items.";
-  const groups = [
+  const kinds = [
     ["question", "On-air Questions"],
     ["signal", "Market Signals"],
     ["clip", "Clip Candidates"],
   ];
-  return groups
-    .map(([kind, label]) => {
-      const items = openItems.filter((item) => item.kind === kind);
-      if (!items.length) return "";
-      return `${label}\n${items.map((item, index) => `${index + 1}. ${formatQueueItem(item)}`).join("\n")}`;
+  const activeSegment = currentSegmentName();
+  const configured = segmentNames();
+  const present = [...new Set(openItems.map(segmentForMessage))];
+  const orderedSegments = [
+    activeSegment,
+    ...configured.filter((segment) => segment !== activeSegment),
+    ...present.filter((segment) => !configured.includes(segment)),
+  ].filter((segment, index, list) => present.includes(segment) && list.indexOf(segment) === index);
+  const sections = orderedSegments
+    .map((segment) => {
+      const segmentItems = openItems.filter((item) => segmentForMessage(item) === segment);
+      const blocks = kinds
+        .map(([kind, label]) => {
+          const items = segmentItems.filter((item) => item.kind === kind);
+          if (!items.length) return "";
+          return `${label}\n${items.map((item, index) => `${index + 1}. ${formatQueueItem(item)}`).join("\n")}`;
+        })
+        .filter(Boolean)
+        .join("\n\n");
+      return blocks ? `${segment}${segment === activeSegment ? " (now)" : ""}\n${blocks}` : "";
     })
     .filter(Boolean)
-    .join("\n\n");
+    .join("\n\n---\n\n");
+  return [`Market Bubble Live Desk rundown`, `Current segment: ${activeSegment}`, "", sections].join("\n");
 }
 
 function bindControls() {
@@ -640,6 +752,24 @@ function bindControls() {
     renderProducerQueue();
     updateMetrics();
     await postJson("/api/queue/clear-done");
+  });
+
+  $("contextRail").addEventListener("click", async (event) => {
+    const button = event.target.closest(".segmentButton");
+    if (!button) return;
+    const currentSegment = button.dataset.segment || "";
+    state.showState = { ...state.showState, currentSegment };
+    renderConfig();
+    renderRadar();
+    renderProducerQueue();
+    renderFeed();
+    updateMetrics();
+    try {
+      await postJson("/api/show-state/update", { currentSegment });
+    } catch (error) {
+      button.textContent = "Failed";
+      setTimeout(renderConfig, 900);
+    }
   });
 
   $("radarList").addEventListener("click", (event) => {

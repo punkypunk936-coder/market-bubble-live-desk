@@ -38,9 +38,10 @@ It:
 - labels every message by source
 - detects questions, market signals, culture chatter, and clip candidates
 - scores high-signal messages against the Market Bubble watchlist
+- lets the producer set the current Market Bubble segment
 - shows which topics are heating up in Signal Radar
 - lets the producer queue items for the hosts
-- creates copyable focus briefs and rundowns
+- creates copyable focus briefs and segment-grouped rundowns
 - keeps the queue saved if the server restarts
 - shows whether each source is live or stale
 
@@ -69,12 +70,13 @@ Before or during the show:
 
 1. Open the Live Desk.
 2. Watch the combined feed.
-3. Use High Signal when chat gets noisy.
-4. Use Signal Radar to see which watchlist topics are heating up.
-5. Click Queue, Ask, Signal, or Clip on important messages.
-6. Copy a Focus Brief when a topic deserves on-air attention.
-7. Copy the Rundown when the hosts need the current queue.
-8. Mark items Done once they have been used.
+3. Set Segment Mode to the current show block.
+4. Use High Signal when chat gets noisy.
+5. Use Signal Radar to see which watchlist topics are heating up for that segment.
+6. Click Queue, Ask, Signal, or Clip on important messages.
+7. Copy a Focus Brief when a topic deserves on-air attention.
+8. Copy the Rundown when the hosts need the current segment queue.
+9. Mark items Done once they have been used.
 
 The producer does not need to explain the whole feed to the hosts. They can hand over clean, source-labeled moments.
 
@@ -98,6 +100,8 @@ The product is contextual. It understands:
 - high-signal audience questions
 - clip-worthy moments
 - producer queue workflow
+
+Segment Mode is the key live-production layer. If the show is in Culture Shock, the tool brings culture-relevant watchlist heat forward, marks queued items as part of that block, and creates a rundown that is easier to hand to the hosts without extra explanation.
 
 It is designed for internal live production, not generic community management.
 
@@ -145,4 +149,3 @@ Best fit:
 ## The One-Line Sell
 
 Market Bubble Live Desk turns scattered live audience chatter into a focused internal rundown for a fast-moving prediction-market show.
-
