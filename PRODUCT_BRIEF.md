@@ -39,6 +39,7 @@ It:
 - detects questions, market signals, culture chatter, and clip candidates
 - scores high-signal messages against the Market Bubble watchlist
 - lets the producer set the current Market Bubble segment
+- lets the producer narrow the feed through the current segment when the room gets noisy
 - shows which topics are heating up in Signal Radar
 - lets the producer queue items for the hosts
 - creates copyable focus briefs and segment-grouped rundowns
@@ -101,7 +102,7 @@ The product is contextual. It understands:
 - clip-worthy moments
 - producer queue workflow
 
-Segment Mode is the key live-production layer. If the show is in Culture Shock, the tool brings culture-relevant watchlist heat forward, marks queued items as part of that block, and creates a rundown that is easier to hand to the hosts without extra explanation.
+Segment Mode is the key live-production layer. If the show is in Culture Shock, the tool can narrow the feed to that segment, bring culture-relevant watchlist heat forward, mark queued items as part of that block, preserve the original topic segment for off-block items, and create a rundown that is easier to hand to the hosts without extra explanation.
 
 It is designed for internal live production, not generic community management.
 

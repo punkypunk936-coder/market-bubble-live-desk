@@ -943,6 +943,11 @@ h2 {
   background: rgba(242, 198, 112, 0.055);
 }
 
+.queueItem.topicCurrent:not(.segmentCurrent) {
+  border-color: rgba(242, 198, 112, 0.24);
+  box-shadow: inset 3px 0 0 rgba(242, 198, 112, 0.34);
+}
+
 .queueTop {
   display: flex;
   align-items: center;
@@ -1043,6 +1048,23 @@ h2 {
   padding: 0 8px;
   color: var(--gold-bright);
   background: rgba(242, 198, 112, 0.06);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.queueTopic {
+  width: max-content;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  margin-top: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 0 8px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.035);
   font-size: 11px;
   font-weight: 900;
   text-transform: uppercase;

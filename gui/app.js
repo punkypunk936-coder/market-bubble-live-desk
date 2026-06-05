@@ -8,6 +8,7 @@ const state = {
   query: "",
   autoScroll: true,
   dense: false,
+  segmentLens: false,
   metrics: { counts: {}, total: 0, clients: 0 },
   sources: {},
   producerQueue: [],
@@ -145,6 +146,7 @@ function passesFilters(message) {
   const query = state.query.trim().toLowerCase();
   const focus = state.focusTerm.trim().toLowerCase();
   if (focus && !messageMatchesTerm(message, focus)) return false;
+  if (state.segmentLens && segmentForMessage(message) !== currentSegmentName()) return false;
   if (!query) return true;
   return [message.text, message.displayName, message.user, message.channel, message.sourceLabel, message.intent, ...(message.matchedTerms || [])]
     .filter(Boolean)
@@ -334,6 +336,14 @@ function segmentForMessage(message) {
   );
 }
 
+function topicSegmentForMessage(message) {
+  const matchedTerms = Array.isArray(message?.matchedTerms) ? message.matchedTerms : [];
+  return normalizeSegment(
+    message?.topicSegment || message?.segment,
+    segmentForTerm(matchedTerms[0] || "", message)
+  );
+}
+
 function suggestedPrompt(term, item) {
   const segment = item?.segment || segmentForTerm(term, item?.sample);
   if (segment === "Culture Shock") return `Ask whether ${term} is a real attention market or just timeline noise.`;
@@ -463,8 +473,8 @@ function filteredQueueItems() {
       : items.filter((item) => !item.done && item.kind === state.queueFilter);
   const activeSegment = currentSegmentName();
   return [...filtered].sort((a, b) => {
-    const aCurrent = segmentForMessage(a) === activeSegment ? 1 : 0;
-    const bCurrent = segmentForMessage(b) === activeSegment ? 1 : 0;
+    const aCurrent = segmentForMessage(a) === activeSegment ? 2 : topicSegmentForMessage(a) === activeSegment ? 1 : 0;
+    const bCurrent = segmentForMessage(b) === activeSegment ? 2 : topicSegmentForMessage(b) === activeSegment ? 1 : 0;
     return (bCurrent - aCurrent) || (queueTimeMs(b) - queueTimeMs(a));
   });
 }
@@ -476,7 +486,8 @@ function renderProducerQueue() {
   const done = (state.producerQueue || []).filter((item) => item.done).length;
   const activeSegment = currentSegmentName();
   const segmentOpen = (state.producerQueue || []).filter((item) => !item.done && segmentForMessage(item) === activeSegment).length;
-  $("queueSummary").textContent = `${open} open · ${segmentOpen} in ${activeSegment} · ${done} done`;
+  const topicFitOpen = (state.producerQueue || []).filter((item) => !item.done && segmentForMessage(item) !== activeSegment && topicSegmentForMessage(item) === activeSegment).length;
+  $("queueSummary").textContent = `${open} open · ${segmentOpen} queued for ${activeSegment}${topicFitOpen ? ` · ${topicFitOpen} topic-fit parked` : ""} · ${done} done`;
   if (!items.length) {
     node.innerHTML = `<div class="emptyState compact">No ${state.queueFilter === "open" ? "open" : state.queueFilter} items.</div>`;
     return;
@@ -486,8 +497,10 @@ function renderProducerQueue() {
     .map(
       (item) => {
         const segment = segmentForMessage(item);
+        const topicSegment = topicSegmentForMessage(item);
+        const topicMismatch = topicSegment && topicSegment !== segment;
         return `
-        <article class="queueItem ${item.source}${item.done ? " done" : ""}${segment === activeSegment ? " segmentCurrent" : ""}">
+        <article class="queueItem ${item.source}${item.done ? " done" : ""}${segment === activeSegment ? " segmentCurrent" : ""}${topicSegment === activeSegment && segment !== activeSegment ? " topicCurrent" : ""}">
           <div class="queueTop">
             <span class="queueKind">${escapeHtml(queueKindLabel(item.kind))}${item.priority === "high" ? " · High signal" : ""}</span>
             <div class="queueActions">
@@ -499,6 +512,7 @@ function renderProducerQueue() {
           <strong>${escapeHtml(item.displayName || "unknown")}</strong>
           <p>${escapeHtml(item.text)}</p>
           <div class="queueSegment">${segment === activeSegment ? "Now" : "Park"} · ${escapeHtml(segment)}</div>
+          ${topicMismatch ? `<div class="queueTopic">Topic · ${escapeHtml(topicSegment)}</div>` : ""}
           ${(item.matchedTerms || []).length ? `<div class="queueTerms">${item.matchedTerms.map((term) => `<span>${escapeHtml(term)}</span>`).join("")}</div>` : ""}
           <div class="queueMeta">${escapeHtml(item.sourceLabel || item.source)}${item.channel ? ` · #${escapeHtml(item.channel)}` : ""} · ${escapeHtml(formatTime(item.createdAt))}</div>
         </article>
@@ -512,7 +526,7 @@ function updateMetrics(payload) {
   if (payload) state.metrics = payload;
   const open = (state.producerQueue || []).filter((item) => !item.done).length;
   const done = (state.producerQueue || []).filter((item) => item.done).length;
-  $("visibleCount").textContent = state.visibleCount || state.messages.filter(passesFilters).length;
+  $("visibleCount").textContent = Number.isFinite(state.visibleCount) ? state.visibleCount : state.messages.filter(passesFilters).length;
   $("queuedCount").textContent = open;
   $("doneCount").textContent = done;
   $("clientCount").textContent = `${state.metrics.clients || 0} viewer${state.metrics.clients === 1 ? "" : "s"}`;
@@ -539,10 +553,15 @@ function updateConnectionLight() {
 function renderActiveFilterBar() {
   const activeSources = [...state.filters].map((source) => sourceNames[source] || source).join(" + ");
   const type = state.intentFilter === "all" ? "All message types" : state.intentFilter === "high" ? "High signal" : intentLabel(state.intentFilter);
-  const highCount = state.messages.filter((message) => state.filters.has(message.source) && message.priority === "high").length;
+  const scopedMessages = state.messages.filter((message) =>
+    state.filters.has(message.source) &&
+    (!state.segmentLens || segmentForMessage(message) === currentSegmentName())
+  );
+  const highCount = scopedMessages.filter((message) => message.priority === "high").length;
   const query = state.query.trim() ? `Search: "${state.query.trim()}"` : "No search";
   const focus = state.focusTerm ? `Focus: ${state.focusTerm}` : "No radar focus";
-  $("activeFilterBar").textContent = `${activeSources || "No sources"} · ${type} · Segment: ${currentSegmentName()} · ${query} · ${focus} · ${highCount} high-signal items`;
+  const lens = state.segmentLens ? "Segment lens on" : "Segment lens off";
+  $("activeFilterBar").textContent = `${activeSources || "No sources"} · ${type} · Segment: ${currentSegmentName()} · ${lens} · ${query} · ${focus} · ${highCount} high-signal items`;
 }
 
 function applySnapshot(payload) {
@@ -639,6 +658,7 @@ function queueMessage(messageId, kind) {
       matchedTerms: message.matchedTerms || [],
       signalScore: message.signalScore || 0,
       segment: message.segment,
+      topicSegment: topicSegmentForMessage(message),
     } : null,
   });
 }
@@ -672,7 +692,10 @@ function formatForClipboard(message) {
 }
 
 function formatQueueItem(item) {
-  return `[${segmentForMessage(item)} · ${queueKindLabel(item.kind)} · ${item.sourceLabel || item.source}${item.channel ? ` #${item.channel}` : ""}] ${item.displayName || "unknown"}: ${item.text}`;
+  const segment = segmentForMessage(item);
+  const topicSegment = topicSegmentForMessage(item);
+  const topicNote = topicSegment && topicSegment !== segment ? ` · Topic ${topicSegment}` : "";
+  return `[${segment} · ${queueKindLabel(item.kind)}${topicNote} · ${item.sourceLabel || item.source}${item.channel ? ` #${item.channel}` : ""}] ${item.displayName || "unknown"}: ${item.text}`;
 }
 
 function formatRundown() {
@@ -737,6 +760,15 @@ function bindControls() {
     state.dense = !state.dense;
     document.body.classList.toggle("denseMode", state.dense);
     $("densityBtn").classList.toggle("active", state.dense);
+  });
+
+  $("segmentLensBtn").addEventListener("click", () => {
+    state.segmentLens = !state.segmentLens;
+    $("segmentLensBtn").classList.toggle("active", state.segmentLens);
+    renderRadar();
+    renderFeed();
+    renderProducerQueue();
+    updateMetrics();
   });
 
   $("clearBtn").addEventListener("click", async () => {

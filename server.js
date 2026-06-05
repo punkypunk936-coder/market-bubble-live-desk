@@ -180,7 +180,8 @@ function loadRuntimeState() {
     state.producerQueue = Array.isArray(payload.producerQueue)
       ? payload.producerQueue.slice(0, 80).map((item) => ({
         ...item,
-        segment: normalizeSegmentName(item.segment || segmentForText(item.text, item.matchedTerms || [])),
+        topicSegment: normalizeSegmentName(item.topicSegment || segmentForText(item.text, item.matchedTerms || [])),
+        segment: normalizeSegmentName(item.segment || item.topicSegment || segmentForText(item.text, item.matchedTerms || [])),
       }))
       : [];
     if (payload.showState && typeof payload.showState === "object") {
@@ -417,13 +418,15 @@ async function handleApi(req, res, pathname) {
       matchedTerms: Array.isArray(snapshot.matchedTerms) ? snapshot.matchedTerms.slice(0, 6) : [],
       signalScore: Number(snapshot.signalScore || 0),
       segment: snapshot.segment || segmentForText(snapshot.text, snapshot.matchedTerms || []),
+      topicSegment: snapshot.topicSegment || snapshot.segment || segmentForText(snapshot.text, snapshot.matchedTerms || []),
     } : null);
     if (!message) {
       jsonResponse(res, 404, { ok: false, error: "Message not found." });
       return;
     }
     const kind = ["question", "signal", "clip"].includes(body.kind) ? body.kind : "signal";
-    const segment = normalizeSegmentName(body.segment || message.segment || state.showState.currentSegment);
+    const topicSegment = normalizeSegmentName(message.topicSegment || message.segment || segmentForText(message.text, message.matchedTerms || []));
+    const segment = normalizeSegmentName(body.segment || state.showState.currentSegment || topicSegment, topicSegment);
     const queueId = hashId(["queue", kind, message.id]);
     const existingIndex = state.producerQueue.findIndex((item) => item.id === queueId);
     const queueItem = {
@@ -441,6 +444,7 @@ async function handleApi(req, res, pathname) {
       matchedTerms: message.matchedTerms || [],
       signalScore: message.signalScore || 0,
       segment,
+      topicSegment,
       queuedAt: new Date().toISOString(),
       done: false,
     };
