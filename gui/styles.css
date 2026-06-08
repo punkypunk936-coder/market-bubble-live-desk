@@ -621,10 +621,10 @@ h2 {
 }
 
 .activeFilterBar {
-  min-height: 30px;
+  min-height: 32px;
   display: flex;
   align-items: center;
-  padding: 0 18px;
+  padding: 0 20px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   color: var(--muted);
   background: rgba(255, 255, 255, 0.012);
@@ -632,49 +632,61 @@ h2 {
 }
 
 .decisionBar {
-  min-height: 46px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  overflow-x: auto;
-  padding: 8px 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(0, 0, 0, 0.18);
-  scrollbar-color: rgba(242, 198, 112, 0.3) transparent;
+  display: grid;
+  grid-template-columns: minmax(132px, 0.9fr) repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  align-items: stretch;
+  padding: 14px 18px 16px;
+  border-bottom: 1px solid rgba(242, 198, 112, 0.16);
+  background:
+    linear-gradient(180deg, rgba(123, 220, 255, 0.035), rgba(0, 0, 0, 0.16)),
+    rgba(0, 0, 0, 0.18);
 }
 
 .decisionBarLabel {
-  flex: 0 0 auto;
-  color: var(--muted);
-  font-size: 11px;
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  border: 1px solid rgba(242, 198, 112, 0.18);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.22);
+  color: var(--gold-bright);
+  padding: 0 12px;
+  font-size: 12px;
   font-weight: 900;
   text-transform: uppercase;
 }
 
 .decisionFilter {
-  min-height: 32px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  flex: 0 0 auto;
+  min-height: 64px;
+  display: grid;
+  align-content: center;
+  gap: 5px;
   border: 1px solid rgba(255, 255, 255, 0.11);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(0, 0, 0, 0.24);
   color: var(--muted);
-  padding: 0 9px;
-  font-size: 12px;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.decisionFilter span {
+  color: inherit;
+  font-size: 11px;
   font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
 .decisionFilter strong {
-  min-width: 22px;
-  min-height: 22px;
-  display: inline-grid;
-  place-items: center;
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.28);
+  min-width: 0;
+  min-height: 0;
+  display: block;
+  border-radius: 0;
+  background: transparent;
   color: var(--text);
-  font-size: 11px;
+  font-size: 26px;
+  line-height: 1;
 }
 
 .decisionFilter:hover,
@@ -684,11 +696,34 @@ h2 {
   background: rgba(242, 198, 112, 0.08);
 }
 
+.decisionFilter.all.active,
+.decisionFilter.all:hover {
+  border-color: rgba(242, 198, 112, 0.34);
+}
+
+.decisionFilter.use {
+  border-color: rgba(83, 252, 24, 0.18);
+}
+
 .decisionFilter.use.active,
 .decisionFilter.use:hover {
-  border-color: rgba(83, 252, 24, 0.38);
+  border-color: rgba(83, 252, 24, 0.44);
   color: #b9ffa5;
-  background: rgba(83, 252, 24, 0.07);
+  background: rgba(83, 252, 24, 0.08);
+}
+
+.decisionFilter.watch.active,
+.decisionFilter.watch:hover {
+  border-color: rgba(123, 220, 255, 0.38);
+  color: var(--cyan);
+  background: rgba(123, 220, 255, 0.065);
+}
+
+.decisionFilter.park.active,
+.decisionFilter.park:hover {
+  border-color: rgba(242, 198, 112, 0.38);
+  color: var(--gold-bright);
+  background: rgba(242, 198, 112, 0.075);
 }
 
 .decisionFilter.noise.active,
@@ -1700,6 +1735,15 @@ h2 {
     grid-template-columns: 1fr;
   }
 
+  .decisionBar {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .decisionBarLabel {
+    grid-column: 1 / -1;
+    min-height: 38px;
+  }
+
   .advancedFilters,
   .advancedFilters > summary {
     width: 100%;
@@ -1761,8 +1805,21 @@ h2 {
   }
 
   .decisionBar {
+    display: flex;
     align-items: stretch;
-    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 12px;
+    scrollbar-color: rgba(242, 198, 112, 0.3) transparent;
+  }
+
+  .decisionBarLabel {
+    flex: 0 0 116px;
+    min-height: 36px;
+  }
+
+  .decisionFilter {
+    flex: 0 0 112px;
+    min-height: 62px;
   }
 
   .messageRow {
