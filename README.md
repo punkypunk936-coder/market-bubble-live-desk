@@ -1,36 +1,53 @@
 # Market Bubble Live Desk
 
-Internal live production desk for Market Bubble: one real-time, source-labeled feed across Twitch, X, and Kick, with a shared producer queue for questions, market signals, and clip candidates.
+Internal live production desk for Market Bubble: one real-time feed across Twitch, X, and Kick, with source labels and a producer queue for questions, market signals, and clip candidates.
 
 Market Bubble is built around prediction-market discourse: digital culture, sports, crypto, tech, attention, and speculation. This desk is meant for the room during live recording, not as a generic chat toy.
 
-For a plain-English business pitch, see [PRODUCT_BRIEF.md](PRODUCT_BRIEF.md).
+For the simplest business pitch, see [PRODUCT_BRIEF.md](PRODUCT_BRIEF.md).
+
+## Plain-English Version
+
+During a live show, useful audience signals are scattered everywhere.
+
+This desk pulls them into one place and tells the operator what to do:
+
+- `Use Now`: bring this to the hosts in the current segment.
+- `Watch`: keep an eye on it.
+- `Park`: useful, but save it for another segment.
+- `Noise`: low-information chatter.
+
+The point is not to read every message. The point is to turn a messy live feed into a short, useful rundown.
 
 ## What It Does
 
-- Merges Twitch, X filtered-stream posts, and Kick chat into one feed.
-- Labels every item by source and channel/rule.
-- Adds a segment label and operator cue to each feed row so the producer can immediately see why it matters.
-- Adds an `Operator Read` decision layer: `Use Now`, `Watch`, `Park`, or `Noise`.
-- Auto-tags messages as `Question`, `Market`, `Clip`, `Culture`, or `Chat`.
-- Scores messages against the Market Bubble watchlist, but gives concrete/actionable messages priority over generic keyword chatter.
-- Ranks Signal Radar by usable items, not just raw mention heat.
-- Shows matched watchlist terms directly on rows and queued items.
-- Suppresses exact repeated feed text over a short window so demo or live dogpile chatter does not dominate the main feed.
-- Adds `Segment Mode` for the current show block: Future-Proof, Culture Shock, Pick n' Roll, or The Price Is Wrong.
-- Adds a `Segment Lens` control to narrow the live feed to the current show block when the room gets noisy.
-- Adds `Producer Assist` with a next best move, segment heat, current queue pressure, and a copyable segment brief.
-- Adds a `Signal Radar` that ranks active watchlist topics by recent heat, source mix, and high-signal count.
-- Generates a copyable focus brief with current-segment timing, source mix, sample message, and a suggested on-air move.
-- Adds a `Latest Show Rehearsal` mode that replays a practical control-room flow from the latest public Market Bubble episode context.
-- Lets producers queue items as on-air questions, market signals, or clip candidates.
-- Stamps queued items with the active segment, preserves the message's natural topic segment, lets operators promote or park items, and sorts the active segment to the top.
-- Persists recent feed history and the operator queue to `data/operator-state.json` so a restart does not wipe the live rundown.
-- Shows per-source freshness so operators can see whether a source is live or stale.
-- Keeps a run-of-show panel for Future-Proof, Culture Shock, Pick n' Roll, and The Price Is Wrong.
-- Keeps previous-show workflow notes so an external reviewer can see why the desk fits Market Bubble's format.
-- Runs in episode-aware demo mode without credentials for review.
-- Stays read-only against external platforms: it does not post back into Twitch, X, or Kick.
+- Combines Twitch, Kick, and X into one live feed.
+- Labels where every message came from.
+- Tags each message by Market Bubble segment.
+- Marks each message as `Use Now`, `Watch`, `Park`, or `Noise`.
+- Detects questions, market signals, clip candidates, culture chatter, and normal chat.
+- Gives concrete, operator-ready messages priority over generic keyword hype.
+- Suppresses repeated text so the feed does not get stuck on one recycled line.
+- Lets the producer queue useful items for the hosts.
+- Shows topic heat in Signal Radar.
+- Gives a next best move in Producer Assist.
+- Creates copyable focus briefs and segment rundowns.
+- Includes previous-show context and latest-show rehearsal mode for demos.
+- Includes deployment guidance and a Render blueprint for an always-live web version.
+
+## Recent Product Fixes
+
+These are the biggest improvements from the latest passes:
+
+- The feed no longer relies only on raw keyword hits.
+- Generic chatter like `HYPE just different` is treated as `Noise`.
+- Useful asks like `Ask Ansem what invalidates this trade` become `Use Now`.
+- Off-segment but useful messages become `Park`, so they are saved without distracting the current segment.
+- `Triage Mode` now focuses on `Use Now` items for the current segment.
+- Signal Radar ranks by usable items, not just mention count.
+- Producer Assist can suggest an unqueued feed item directly.
+- The demo feed is now show-aware and less repetitive.
+- The repo includes `render.yaml`, `/healthz`, and clearer deployment docs.
 
 ## Local Run
 
@@ -58,19 +75,21 @@ Replace the Twitch/Kick channel names with the actual live channel slugs if they
 
 ## Producer Flow
 
-1. Keep the main feed open during the live show.
-2. Use source toggles and search to narrow the room.
-3. Set `Segment Mode` to the current show block so the radar and queue are biased toward the right context.
-4. Before a demo or pre-show warmup, open `Latest show rehearsal` and click `Run Rehearsal` to watch the desk handle the latest public episode flow.
-5. Start from `Producer Assist`: use the next move, `Triage Mode`, or `Copy Segment Brief` when the hosts need a clean handoff.
-6. Toggle `Segment Lens` when the producer only wants messages relevant to the current block.
-7. Use `Operator Read` to switch between `Use Now`, `Watch`, `Park`, and `Noise` without reading the full feed.
-8. Use the `View` controls to isolate questions, market signals, clip candidates, or culture chatter.
-9. Use `Signal Radar` to see which watchlist topics are heating up across sources. Click a radar item to focus the feed.
-10. Click `Copy Focus Brief` to hand a concise on-air prompt to the hosts or producer chat.
-11. Click `Queue` for the app's best guess, or use `Ask`, `Signal`, and `Clip` to route a message manually.
-12. Work the Operator Queue: `Use Now` promotes a parked item into the current segment, `Park Topic` moves an off-block item back to its natural topic segment, `Done` closes an item, and `Copy Rundown` copies the open queue grouped by segment.
-13. Use `Auto-scroll` when actively watching live flow, and turn it off when reviewing older messages. `Dense` compresses the feed for high-volume moments.
+1. Open the desk before the show.
+2. Set `Segment Mode` to the current block.
+3. Watch `Producer Assist` for the next move.
+4. Use `Operator Read` to focus the feed:
+   - `Use Now` for items worth acting on.
+   - `Watch` for developing topics.
+   - `Park` for useful items that belong later.
+   - `Noise` for low-information chatter.
+5. Queue the best item as `Ask`, `Signal`, or `Clip`.
+6. Use `Signal Radar` when a topic starts heating up.
+7. Copy a `Focus Brief` or `Segment Brief` when the hosts need a clean handoff.
+8. Copy the `Rundown` at the end of a segment.
+9. Mark used items `Done`.
+
+For demos, open `Latest show rehearsal` and click `Run Rehearsal`.
 
 ## Deployment
 

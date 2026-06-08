@@ -1,160 +1,108 @@
-# Market Bubble Live Desk: Product Brief
+# Market Bubble Live Desk: Simple Product Brief
 
-## The Simple Pitch
+## One-Line Pitch
 
-Market Bubble Live Desk is an internal control room for the Market Bubble team.
+Market Bubble Live Desk turns Twitch, Kick, and X chatter into a focused internal rundown for a live Market Bubble show.
 
-When Banks, Ansem, and the team are live, audience signals are scattered across Twitch, Kick, and X. Good questions, market reactions, clip-worthy comments, and prediction-market chatter can get buried fast.
+## What It Is
 
-This product pulls those sources into one live desk, labels where every message came from, highlights the most useful signals, and gives the producer a simple way to turn audience flow into show material.
+This is not a public chat app.
 
-It is not a public chat app. It is a backstage operator tool.
+It is a backstage producer desk for the Market Bubble team.
 
-## The Problem
+When the show is live, the producer can see audience messages, market reactions, clip ideas, and topic momentum in one place instead of jumping between tabs.
 
-Live shows move quickly.
+## Why It Exists
 
-The team needs to watch:
+Market Bubble moves fast.
 
-- Twitch chat
-- Kick chat
-- X / Twitter posts
-- prediction-market reactions
-- audience questions
-- clip candidates
-- market/topic momentum
+The show jumps between crypto, prediction markets, AI, sports, culture, and audience speculation. Useful signals can get buried quickly.
 
-Doing that manually means switching tabs, losing context, missing good comments, and asking the producer to remember too much at once.
+The desk helps the operator answer one simple question:
 
-For a show like Market Bubble, that is a real cost. The show is about attention, markets, culture, and timing. Missing the right audience signal at the right moment means missing a better question, a better segment beat, or a better clip.
+> What is worth bringing to the hosts right now?
 
-## What The Product Does
+## What It Does
 
-Market Bubble Live Desk gives the team one internal screen for the live show.
+- Pulls Twitch, Kick, and X into one live feed.
+- Labels every message by source.
+- Shows which Market Bubble segment each message belongs to.
+- Marks each message as `Use Now`, `Watch`, `Park`, or `Noise`.
+- Routes good items into an Operator Queue.
+- Separates questions, market signals, and clip candidates.
+- Suppresses repeated text so one recycled message does not take over the feed.
+- Shows topic heat in Signal Radar.
+- Gives the producer a next move in Producer Assist.
+- Creates copyable focus briefs and segment rundowns.
+- Includes a latest-show rehearsal mode for demos and dry runs.
+- Includes previous-show context so the tool feels built for Market Bubble, not generic livestreaming.
+- Includes deployment docs and a Render blueprint for an always-live web version.
 
-It:
+## Recent Fixes
 
-- combines Twitch, Kick, and X into one real-time feed
-- labels every message by source
-- shows the segment and operator cue for each message so the feed is easier to read quickly
-- labels each message as `Use Now`, `Watch`, `Park`, or `Noise`
-- detects questions, market signals, culture chatter, and clip candidates
-- scores high-signal messages against the Market Bubble watchlist while reducing generic keyword-only chatter
-- suppresses exact repeated text so one recycled line does not take over the feed
-- lets the producer set the current Market Bubble segment
-- lets the producer narrow the feed through the current segment when the room gets noisy
-- gives the producer a compact next-move assist panel and copyable segment brief
-- shows which topics are heating up in Signal Radar
-- lets the producer queue items for the hosts
-- creates copyable focus briefs and segment-grouped rundowns
-- lets the team run a latest-show rehearsal so operators can see how the desk handles a real Market Bubble flow before going live
-- includes prior-show context so the workflow maps to real Market Bubble episodes, not a generic chat dashboard
-- keeps the queue saved if the server restarts
-- shows whether each source is live or stale
+The biggest recent improvement is the `Operator Read` layer.
 
-The goal is simple: help the team spot what matters and move it into the show quickly.
+Before, the app could over-prioritize keyword hits like `HYPE`, `Polymarket`, or `ETH`. That made some feed items look important even when they were not useful.
 
-## Why It Is Useful For Market Bubble
+Now the app asks a better question:
 
-Market Bubble is not just a normal livestream.
+> Is this actually usable by the operator?
 
-The show sits at the intersection of:
+The feed now sorts messages into:
 
-- prediction markets
-- crypto
-- sports
-- internet culture
-- attention
-- audience speculation
+- `Use Now`: relevant to the current segment and worth acting on.
+- `Watch`: potentially useful, but not urgent.
+- `Park`: useful, but belongs to another segment.
+- `Noise`: low-information chatter.
 
-That means the chat is part of the product. The audience is not only reacting; they are surfacing markets, narratives, questions, and clips.
+Example:
 
-This tool helps the team use that audience energy instead of drowning in it.
+- `Ask Ansem what invalidates the ETH trade` becomes useful.
+- `HYPE just different` becomes noise.
+
+That makes the desk easier to skim during a real stream.
 
 ## How A Producer Uses It
 
-Before or during the show:
+1. Open the desk before the show.
+2. Set `Segment Mode` to the current show block.
+3. Watch `Producer Assist` for the next best move.
+4. Use `Operator Read` to focus on `Use Now` items.
+5. Queue the best question, signal, or clip.
+6. Park off-segment items for later.
+7. Copy the segment brief or rundown when the hosts need a clean handoff.
 
-1. Open the Live Desk.
-2. Watch the combined feed.
-3. Set Segment Mode to the current show block.
-4. Run the latest-show rehearsal before a demo, dry run, or live production handoff.
-5. Use High Signal when chat gets noisy.
-6. Use Signal Radar to see which watchlist topics are heating up for that segment.
-7. Click Queue, Ask, Signal, or Clip on important messages.
-8. Copy a Focus Brief when a topic deserves on-air attention.
-9. Copy the Rundown when the hosts need the current segment queue.
-10. Mark items Done once they have been used.
+The producer does not need to read everything.
 
-The producer does not need to explain the whole feed to the hosts. They can hand over clean, source-labeled moments.
+The product should reduce the room to a short list of useful moves.
 
-## What Makes It Different From A Basic Chat Aggregator
+## What Makes It Different
 
-A basic aggregator says:
+A basic chat aggregator says:
 
 > Here are all the messages.
 
 Market Bubble Live Desk says:
 
-> Here is what is relevant to this show, right now.
+> Here is what matters for this segment, and what the operator should do with it.
 
-That difference matters.
+That is the difference.
 
-The product is contextual. It understands:
+## Best Use Case
 
-- Market Bubble segments
-- prior-show and weekly-radar beats like BTC caution, HyperLiquid, Ethereum, Akash compute, GTA 6, AI versus crypto, Bullpen baseball, Zcash, NEAR, AI agents, and Polymarket
-- source labels
-- high-signal audience questions
-- operator-ready decisions, not just raw keyword alerts
-- clip-worthy moments
-- producer queue workflow
+This is best for:
 
-Segment Mode is the key live-production layer. If the show is in Culture Shock, the tool can narrow the feed to that segment, bring culture-relevant watchlist heat forward, show a next best move, mark queued items as part of that block, preserve the original topic segment for off-block items, and create a brief or rundown that is easier to hand to the hosts without extra explanation.
-
-It is designed for internal live production, not generic community management.
-
-## Business Value
-
-For a media or podcast team, this creates value in a few practical ways:
-
-- fewer missed audience moments
-- faster live production decisions
-- better host prompts
-- cleaner producer-to-host handoff
-- better clip discovery
-- less tab switching
-- stronger use of live community energy
-- more repeatable show operations
-
-The product helps a small team operate like a larger live production desk.
-
-## What It Does Not Do
-
-It does not post back into Twitch, X, or Kick.
-
-That is intentional.
-
-The first version is read-only because the safest and most useful job is to help the internal team observe, triage, and route signals. Posting, moderation, and audience response tools can come later if the team wants them.
-
-## Who It Is For
-
-Primary users:
-
-- producer
-- showrunner
-- clipping team
-- hosts
-- social/media operator
-
-Best fit:
-
-- live podcasts
+- live podcast producers
+- Market Bubble show operators
+- clipping teams
+- social/media operators
 - creator-led market shows
-- prediction-market media teams
-- trading/culture livestreams
-- teams that need to monitor audience reaction across platforms
+- teams monitoring audience reaction across multiple platforms
 
-## The One-Line Sell
+## Current Status
 
-Market Bubble Live Desk turns scattered live audience chatter into a focused internal rundown for a fast-moving prediction-market show.
+The product is ready for internal review and demo mode.
+
+It can run locally today, and the repo includes deployment guidance for putting it online as a long-running Node web service.
+
+The recommended first deployment path is Render Starter because the app uses live server connections and should not be deployed as a static site.
