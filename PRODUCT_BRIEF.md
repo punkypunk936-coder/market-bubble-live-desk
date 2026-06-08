@@ -37,8 +37,9 @@ It:
 - combines Twitch, Kick, and X into one real-time feed
 - labels every message by source
 - shows the segment and operator cue for each message so the feed is easier to read quickly
+- labels each message as `Use Now`, `Watch`, `Park`, or `Noise`
 - detects questions, market signals, culture chatter, and clip candidates
-- scores high-signal messages against the Market Bubble watchlist
+- scores high-signal messages against the Market Bubble watchlist while reducing generic keyword-only chatter
 - suppresses exact repeated text so one recycled line does not take over the feed
 - lets the producer set the current Market Bubble segment
 - lets the producer narrow the feed through the current segment when the room gets noisy
@@ -105,6 +106,7 @@ The product is contextual. It understands:
 - prior-show and weekly-radar beats like BTC caution, HyperLiquid, Ethereum, Akash compute, GTA 6, AI versus crypto, Bullpen baseball, Zcash, NEAR, AI agents, and Polymarket
 - source labels
 - high-signal audience questions
+- operator-ready decisions, not just raw keyword alerts
 - clip-worthy moments
 - producer queue workflow
 

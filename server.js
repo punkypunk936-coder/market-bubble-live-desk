@@ -343,19 +343,94 @@ function matchedWatchTerms(text) {
     .slice(0, 6);
 }
 
+function concreteSignals(text) {
+  const value = String(text || "").toLowerCase();
+  const signals = [];
+  if (/(?:^|\s)(?:\$?\d+(?:\.\d+)?%?|\d+k|\d+m|\d+b)(?:\s|$|[.,:;?!])/.test(value)) signals.push("number");
+  if (/\b(entry|exit|invalidat(?:e|es|ion)|time horizon|setup|line|spread|odds|probability|funding|open interest|oi|liquidation|support|resistance|valuation|price)\b/.test(value)) signals.push("market detail");
+  if (/\b(ask|queue|clip|save|turn this|follow[- ]?up|what would|what invalidates|why is|how does|who captures|where is|should)\b/.test(value)) signals.push("operator-ready");
+  if (/\b(banks|ansem|flood|erik|voorhees|majlak|guest|host|producer)\b/.test(value)) signals.push("host context");
+  return signals;
+}
+
+function isLowInfoMessage(text) {
+  const value = String(text || "").trim().toLowerCase();
+  if (value.length < 28) return true;
+  const filler = /\b(cooking|cook|fire|lfg|moon|send it|based|lol|lmao|wagmi|insane|crazy|different|goat|vibes|eyes)\b/g;
+  const matches = value.match(filler) || [];
+  return matches.length >= 2 && !/[?？]/.test(value) && !/\d/.test(value);
+}
+
+function operatorAssessment({ text, intent, matchedTerms, segment, score, priority }) {
+  const concrete = concreteSignals(text);
+  const reasons = [];
+  if (intent === "question") reasons.push("clear ask");
+  if (intent === "clip") reasons.push("clip candidate");
+  if (intent === "market") reasons.push("market signal");
+  if (concrete.includes("operator-ready")) reasons.push("operator-ready wording");
+  if (concrete.includes("market detail")) reasons.push("specific market detail");
+  if (concrete.includes("host context")) reasons.push("host context");
+  if (matchedTerms.length) reasons.push(`watchlist: ${matchedTerms.slice(0, 2).join(", ")}`);
+
+  const actionability = Math.max(0, Math.min(10,
+    score +
+    (intent === "question" ? 1 : 0) +
+    (concrete.includes("operator-ready") ? 2 : 0) +
+    (concrete.includes("market detail") ? 1 : 0) -
+    (isLowInfoMessage(text) ? 3 : 0)
+  ));
+  const lowInfo = isLowInfoMessage(text) && concrete.length === 0;
+  const decision = lowInfo
+    ? "ignore"
+    : actionability >= 8
+      ? "queue"
+      : actionability >= 4
+        ? "watch"
+        : "ignore";
+  const kind = intent === "question"
+    ? "question"
+    : intent === "clip" || intent === "culture"
+      ? "clip"
+      : "signal";
+  const label = decision === "queue"
+    ? "Queue"
+    : decision === "watch"
+      ? "Watch"
+      : "Noise";
+  const reason = decision === "ignore" && lowInfo
+    ? "low information"
+    : reasons.slice(0, 2).join(" + ") || `${priority} priority`;
+  return {
+    decision,
+    label,
+    kind,
+    actionability,
+    reason,
+    reasons: reasons.slice(0, 4),
+    segment,
+  };
+}
+
 function scoreMessage({ source, text, intent }) {
   const matchedTerms = matchedWatchTerms(text);
   const segment = segmentForText(text, matchedTerms);
   let score = 0;
   if (intent === "question") score += 3;
-  if (intent === "market") score += 3;
+  if (intent === "market") score += 2;
   if (intent === "clip") score += 2;
-  if (intent === "culture") score += 1;
-  if (source === "x") score += 1;
-  score += Math.min(matchedTerms.length * 2, 6);
-  if (/\b(banks|ansem|polymarket|bullpen|bitcoin|btc|60k|zcash|zec|near|liquidation|liquidations)\b/i.test(text || "")) score += 2;
-  const priority = score >= 6 ? "high" : score >= 3 ? "medium" : "normal";
-  return { score, priority, matchedTerms, segment };
+  if (intent === "culture") score += 0;
+  if (source === "x" && /\b(thread|clip|chart|odds|line|market|source)\b/i.test(text || "")) score += 1;
+  score += Math.min(matchedTerms.length, 4);
+  const concrete = concreteSignals(text);
+  if (concrete.includes("operator-ready")) score += 2;
+  if (concrete.includes("market detail")) score += 2;
+  if (concrete.includes("host context")) score += 1;
+  if (/\b(banks|ansem|polymarket|bullpen|bitcoin|btc|60k|zcash|zec|near|liquidation|liquidations)\b/i.test(text || "")) score += 1;
+  if (isLowInfoMessage(text)) score -= 3;
+  score = Math.max(0, score);
+  const priority = score >= 8 ? "high" : score >= 4 ? "medium" : "normal";
+  const operator = operatorAssessment({ text, intent, matchedTerms, segment, score, priority });
+  return { score, priority, matchedTerms, segment, operator };
 }
 
 function pushMessage(input) {
@@ -371,6 +446,7 @@ function pushMessage(input) {
 
   const intent = input.intent || classifyMessage(input.text);
   const signal = scoreMessage({ source, text: input.text, intent });
+  const segment = input.segment || signal.segment;
   const message = {
     id,
     source,
@@ -388,7 +464,8 @@ function pushMessage(input) {
     signalScore: signal.score,
     priority: signal.priority,
     matchedTerms: signal.matchedTerms,
-    segment: input.segment || signal.segment,
+    segment,
+    operator: { ...signal.operator, segment },
     meta: input.meta || {},
   };
 
@@ -422,6 +499,7 @@ function queueProducerItem(message, kind, segmentOverride) {
     priority: message.priority,
     matchedTerms: message.matchedTerms || [],
     signalScore: message.signalScore || 0,
+    operator: message.operator || null,
     segment,
     topicSegment,
     queuedAt: new Date().toISOString(),
@@ -720,6 +798,7 @@ async function handleApi(req, res, pathname) {
       priority: snapshot.priority || "normal",
       matchedTerms: Array.isArray(snapshot.matchedTerms) ? snapshot.matchedTerms.slice(0, 6) : [],
       signalScore: Number(snapshot.signalScore || 0),
+      operator: snapshot.operator || null,
       segment: snapshot.segment || segmentForText(snapshot.text, snapshot.matchedTerms || []),
       topicSegment: snapshot.topicSegment || snapshot.segment || segmentForText(snapshot.text, snapshot.matchedTerms || []),
     } : null);

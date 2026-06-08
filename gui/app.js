@@ -4,6 +4,7 @@ const state = {
   queue: [],
   filters: new Set(["kick", "x", "twitch"]),
   intentFilter: "all",
+  decisionFilter: "all",
   queueFilter: "open",
   query: "",
   autoScroll: true,
@@ -123,6 +124,7 @@ function queueTimeMs(item) {
 }
 
 function smartKindForMessage(message) {
+  if (["question", "signal", "clip"].includes(message?.operator?.kind)) return message.operator.kind;
   if (message.intent === "question") return "question";
   if (message.intent === "clip" || message.intent === "culture") return "clip";
   return "signal";
@@ -136,7 +138,35 @@ function queuedKindsForMessage(messageId) {
   );
 }
 
-function passesFilters(message) {
+function baseOperatorDecision(message) {
+  const decision = message?.operator?.decision;
+  if (["queue", "watch", "ignore"].includes(decision)) return decision;
+  if (message?.priority === "high") return "queue";
+  if (message?.priority === "medium") return "watch";
+  return "ignore";
+}
+
+function operatorReason(message) {
+  return message?.operator?.reason || operatorCueForMessage(message);
+}
+
+function decisionForMessage(message) {
+  const base = baseOperatorDecision(message);
+  const segment = segmentForMessage(message);
+  const current = currentSegmentName();
+  if (base === "queue" && segment === current) {
+    return { status: "use", label: "Use Now", reason: operatorReason(message), kind: message?.operator?.kind || smartKindForMessage(message) };
+  }
+  if (base === "queue") {
+    return { status: "park", label: "Park", reason: `For ${segment}`, kind: message?.operator?.kind || smartKindForMessage(message) };
+  }
+  if (base === "watch") {
+    return { status: "watch", label: "Watch", reason: operatorReason(message), kind: message?.operator?.kind || smartKindForMessage(message) };
+  }
+  return { status: "noise", label: "Noise", reason: message?.operator?.reason || "Low actionability", kind: message?.operator?.kind || smartKindForMessage(message) };
+}
+
+function passesBaseFilters(message) {
   if (!state.filters.has(message.source)) return false;
   if (state.intentFilter === "high") {
     if (message.priority !== "high") return false;
@@ -151,6 +181,12 @@ function passesFilters(message) {
   return [message.text, message.displayName, message.user, message.channel, message.sourceLabel, message.intent, ...(message.matchedTerms || [])]
     .filter(Boolean)
     .some((part) => String(part).toLowerCase().includes(query));
+}
+
+function passesFilters(message) {
+  if (!passesBaseFilters(message)) return false;
+  if (state.decisionFilter !== "all" && decisionForMessage(message).status !== state.decisionFilter) return false;
+  return true;
 }
 
 function operatorCueForMessage(message) {
@@ -175,6 +211,8 @@ function renderMessage(message, flash = false) {
   const priority = template.querySelector(".priorityPill");
   const segment = template.querySelector(".segmentPill");
   const matchTerms = template.querySelector(".matchTerms");
+  const decisionBadge = template.querySelector(".decisionBadge");
+  const decisionReason = template.querySelector(".decisionReason");
   const text = template.querySelector(".messageText");
   const cue = template.querySelector(".messageCue");
   const time = template.querySelector(".messageTime");
@@ -182,6 +220,8 @@ function renderMessage(message, flash = false) {
 
   row.classList.add(message.source);
   row.classList.add(`priority-${message.priority || "normal"}`);
+  const decision = decisionForMessage(message);
+  row.classList.add(`decision-${decision.status}`);
   row.dataset.messageId = message.id;
   const queuedKinds = queuedKindsForMessage(message.id);
   if (queuedKinds.size) row.classList.add("queued");
@@ -199,6 +239,9 @@ function renderMessage(message, flash = false) {
   if (message.priority) priority.classList.add(message.priority);
   segment.textContent = segmentForMessage(message);
   matchTerms.textContent = (message.matchedTerms || []).join(", ");
+  decisionBadge.textContent = decision.label;
+  decisionBadge.classList.add(decision.status);
+  decisionReason.textContent = decision.reason;
   text.textContent = escapeText(message.text);
   cue.textContent = operatorCueForMessage(message);
   time.textContent = formatTime(message.createdAt || message.receivedAt);
@@ -220,6 +263,7 @@ function renderFeed() {
   const feed = $("feed");
   const visible = state.messages.filter(passesFilters).slice(-250);
   state.visibleCount = visible.length;
+  renderDecisionBar();
   feed.innerHTML = "";
   if (!visible.length) {
     const empty = document.createElement("div");
@@ -238,6 +282,7 @@ function appendMessage(message) {
   state.messages.push(message);
   if (state.messages.length > 500) state.messages.splice(0, state.messages.length - 500);
   renderRadar();
+  renderDecisionBar();
   if (state.paused) {
     state.queue.push(message);
     updateConnectionLight();
@@ -256,6 +301,33 @@ function appendMessage(message) {
   state.visibleCount = rows.length;
   if (state.autoScroll) feed.scrollTop = feed.scrollHeight;
   updateMetrics();
+}
+
+function renderDecisionBar() {
+  const node = $("decisionBar");
+  if (!node) return;
+  const scoped = state.messages.filter(passesBaseFilters);
+  const counts = scoped.reduce((acc, message) => {
+    const status = decisionForMessage(message).status;
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, { use: 0, watch: 0, park: 0, noise: 0 });
+  const items = [
+    ["all", "All", scoped.length],
+    ["use", "Use Now", counts.use],
+    ["watch", "Watch", counts.watch],
+    ["park", "Park", counts.park],
+    ["noise", "Noise", counts.noise],
+  ];
+  node.innerHTML = `
+    <span class="decisionBarLabel">Operator read</span>
+    ${items.map(([status, label, count]) => `
+      <button class="decisionFilter${state.decisionFilter === status ? " active" : ""} ${status}" type="button" data-decision="${status}">
+        <span>${label}</span>
+        <strong>${count}</strong>
+      </button>
+    `).join("")}
+  `;
 }
 
 function renderSources() {
@@ -453,6 +525,7 @@ function computeRadar() {
         return acc;
       }, {});
       const high = hits.filter((message) => message.priority === "high").length;
+      const usable = hits.filter((message) => baseOperatorDecision(message) === "queue").length;
       const sample = hits.find((message) => message.priority === "high") || hits[0] || allHits[allHits.length - 1] || null;
       const segment = normalizeSegment(sample?.segment, segmentForTerm(term, sample));
       const inCurrentSegment = segment === activeSegment;
@@ -465,7 +538,8 @@ function computeRadar() {
         sample,
         segment,
         inCurrentSegment,
-        radarScore: high * 5 + hits.length * 3 + Math.min(allHits.length, 8) + (inCurrentSegment ? 6 : 0),
+        usable,
+        radarScore: usable * 8 + high * 3 + hits.length * 2 + Math.min(allHits.length, 8) + (inCurrentSegment ? 6 : 0),
       };
     })
     .filter((item) => item.count > 0 || item.allCount > 0)
@@ -494,7 +568,7 @@ function formatFocusBrief(item) {
     `Current segment: ${activeSegment}`,
     `Topic segment: ${item.segment}`,
     `Timing note: ${timing}`,
-    `Recent heat: ${item.count} mentions in the last 10 minutes, ${item.high} high-signal.`,
+    `Recent heat: ${item.count} mentions in the last 10 minutes, ${item.usable || 0} usable, ${item.high} high-signal.`,
     `Sources: ${formatSources(item.sourceCounts)}`,
     `Suggested on-air move: ${suggestedPrompt(item.term, item)}`,
     `Sample: ${sample}`,
@@ -527,6 +601,21 @@ function sourceSummary() {
     .join("; ");
 }
 
+function topActionableFeedMessage() {
+  const activeSegment = currentSegmentName();
+  return state.messages
+    .filter((message) =>
+      decisionForMessage(message).status === "use" &&
+      segmentForMessage(message) === activeSegment &&
+      !queuedKindsForMessage(message.id).size
+    )
+    .sort((a, b) =>
+      ((b.operator?.actionability || 0) - (a.operator?.actionability || 0)) ||
+      ((b.signalScore || 0) - (a.signalScore || 0)) ||
+      (messageTimeMs(b) - messageTimeMs(a))
+    )[0] || null;
+}
+
 function producerNextMove() {
   const activeSegment = currentSegmentName();
   const openItems = openQueueItems();
@@ -555,6 +644,15 @@ function producerNextMove() {
       label: "Mark this for clipping",
       body: `${topClip.displayName || "unknown"}: ${topClip.text}`,
       detail: `${activeSegment} clip candidate is waiting.`,
+    };
+  }
+  const feedCandidate = topActionableFeedMessage();
+  if (feedCandidate) {
+    const decision = decisionForMessage(feedCandidate);
+    return {
+      label: "Queue this from the feed",
+      body: `${feedCandidate.displayName || "unknown"}: ${feedCandidate.text}`,
+      detail: `${decision.reason}. Suggested route: ${queueKindLabel(decision.kind)}.`,
     };
   }
   if (radar && radar.inCurrentSegment) {
@@ -621,11 +719,11 @@ function renderRadar() {
         <button class="radarItem${item.term === state.focusTerm ? " active" : ""}${item.inCurrentSegment ? " segmentFit" : ""}" type="button" data-term="${escapeHtml(item.term)}">
           <span>
             <strong>${escapeHtml(item.term)}</strong>
-            <small>${item.inCurrentSegment ? `<em class="segmentFitBadge">Now</em> ` : ""}${escapeHtml(item.segment)} · ${escapeHtml(formatSources(item.sourceCounts))}</small>
+            <small>${item.inCurrentSegment ? `<em class="segmentFitBadge">Now</em> ` : ""}${escapeHtml(item.segment)} · ${item.usable} usable · ${escapeHtml(formatSources(item.sourceCounts))}</small>
           </span>
           <span class="radarCounts">
             <b>${item.count}</b>
-            <em>${item.high} high</em>
+            <em>${item.usable} use</em>
           </span>
         </button>
       `
@@ -636,7 +734,7 @@ function renderRadar() {
     ? `
       <div class="focusTitle">${escapeHtml(briefItem.term)} · ${escapeHtml(briefItem.segment)}${briefItem.inCurrentSegment ? " · Now" : ""}</div>
       <p>${escapeHtml(suggestedPrompt(briefItem.term, briefItem))}</p>
-      <div class="focusMeta">${escapeHtml(briefItem.count)} recent · ${escapeHtml(briefItem.high)} high-signal · ${escapeHtml(formatSources(briefItem.sourceCounts))}</div>
+      <div class="focusMeta">${escapeHtml(briefItem.count)} recent · ${escapeHtml(briefItem.usable)} usable · ${escapeHtml(briefItem.high)} high-signal · ${escapeHtml(formatSources(briefItem.sourceCounts))}</div>
       ${briefItem.sample ? `<blockquote>${escapeHtml(briefItem.sample.displayName || "unknown")}: ${escapeHtml(briefItem.sample.text)}</blockquote>` : ""}
     `
     : `<div class="emptyState compact">Select a radar item when signals appear.</div>`;
@@ -753,7 +851,8 @@ function renderActiveFilterBar() {
   const query = state.query.trim() ? `Search: "${state.query.trim()}"` : "No search";
   const focus = state.focusTerm ? `Focus: ${state.focusTerm}` : "No radar focus";
   const lens = state.segmentLens ? "Segment lens on" : "Segment lens off";
-  $("activeFilterBar").textContent = `${activeSources || "No sources"} · ${type} · Segment: ${currentSegmentName()} · ${lens} · ${query} · ${focus} · ${highCount} high-signal items`;
+  const decision = state.decisionFilter === "all" ? "All operator reads" : `Decision: ${state.decisionFilter}`;
+  $("activeFilterBar").textContent = `${activeSources || "No sources"} · ${type} · ${decision} · Segment: ${currentSegmentName()} · ${lens} · ${query} · ${focus} · ${highCount} high-signal items`;
 }
 
 function applySnapshot(payload) {
@@ -849,6 +948,7 @@ function queueMessage(messageId, kind) {
       priority: message.priority,
       matchedTerms: message.matchedTerms || [],
       signalScore: message.signalScore || 0,
+      operator: message.operator || null,
       segment: message.segment,
       topicSegment: topicSegmentForMessage(message),
     } : null,
@@ -963,7 +1063,7 @@ function formatSegmentBrief() {
     `Next move: ${move.label} — ${move.body}`,
     `Why: ${move.detail}`,
     radar
-      ? `Radar: ${radar.term} · ${radar.count} recent · ${radar.high} high-signal · ${radar.segment}`
+      ? `Radar: ${radar.term} · ${radar.count} recent · ${radar.usable || 0} usable · ${radar.high} high-signal · ${radar.segment}`
       : "Radar: no active watchlist heat",
     `Queue now: ${nowItems.length} open · ${counts.question || 0} questions · ${counts.signal || 0} signals · ${counts.clip || 0} clips`,
     `Source health: ${sourceSummary()}`,
@@ -1013,14 +1113,15 @@ function bindControls() {
   });
 
   $("triageModeBtn").addEventListener("click", () => {
-    state.intentFilter = "high";
+    state.intentFilter = "all";
+    state.decisionFilter = "use";
     state.segmentLens = true;
     state.focusTerm = "";
     state.query = "";
     $("searchInput").value = "";
     $("segmentLensBtn").classList.add("active");
     document.querySelectorAll(".viewToggle").forEach((item) => {
-      item.classList.toggle("active", item.dataset.intent === "high");
+      item.classList.toggle("active", item.dataset.intent === "all");
     });
     renderRadar();
     renderFeed();
@@ -1043,6 +1144,7 @@ function bindControls() {
     state.autoScroll = true;
     state.segmentLens = false;
     state.intentFilter = "all";
+    state.decisionFilter = "all";
     state.focusTerm = "";
     state.query = "";
     state.filters = new Set(["kick", "x", "twitch"]);
@@ -1144,6 +1246,14 @@ function bindControls() {
     setTimeout(() => {
       $("copyRundownBtn").textContent = "Copy Rundown";
     }, 900);
+  });
+
+  $("decisionBar").addEventListener("click", (event) => {
+    const button = event.target.closest(".decisionFilter");
+    if (!button) return;
+    state.decisionFilter = button.dataset.decision || "all";
+    renderFeed();
+    updateMetrics();
   });
 
   $("feed").addEventListener("click", async (event) => {

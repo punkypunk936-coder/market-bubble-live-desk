@@ -11,8 +11,10 @@ For a plain-English business pitch, see [PRODUCT_BRIEF.md](PRODUCT_BRIEF.md).
 - Merges Twitch, X filtered-stream posts, and Kick chat into one feed.
 - Labels every item by source and channel/rule.
 - Adds a segment label and operator cue to each feed row so the producer can immediately see why it matters.
+- Adds an `Operator Read` decision layer: `Use Now`, `Watch`, `Park`, or `Noise`.
 - Auto-tags messages as `Question`, `Market`, `Clip`, `Culture`, or `Chat`.
-- Scores messages against the Market Bubble watchlist and exposes a `High Signal` view.
+- Scores messages against the Market Bubble watchlist, but gives concrete/actionable messages priority over generic keyword chatter.
+- Ranks Signal Radar by usable items, not just raw mention heat.
 - Shows matched watchlist terms directly on rows and queued items.
 - Suppresses exact repeated feed text over a short window so demo or live dogpile chatter does not dominate the main feed.
 - Adds `Segment Mode` for the current show block: Future-Proof, Culture Shock, Pick n' Roll, or The Price Is Wrong.
@@ -62,8 +64,8 @@ Replace the Twitch/Kick channel names with the actual live channel slugs if they
 4. Before a demo or pre-show warmup, open `Latest show rehearsal` and click `Run Rehearsal` to watch the desk handle the latest public episode flow.
 5. Start from `Producer Assist`: use the next move, `Triage Mode`, or `Copy Segment Brief` when the hosts need a clean handoff.
 6. Toggle `Segment Lens` when the producer only wants messages relevant to the current block.
-7. Use the `View` controls to isolate questions, market signals, clip candidates, or culture chatter.
-8. Use `High Signal` when the room gets loud; it prioritizes watchlist hits and show-relevant questions.
+7. Use `Operator Read` to switch between `Use Now`, `Watch`, `Park`, and `Noise` without reading the full feed.
+8. Use the `View` controls to isolate questions, market signals, clip candidates, or culture chatter.
 9. Use `Signal Radar` to see which watchlist topics are heating up across sources. Click a radar item to focus the feed.
 10. Click `Copy Focus Brief` to hand a concise on-air prompt to the hosts or producer chat.
 11. Click `Queue` for the app's best guess, or use `Ask`, `Signal`, and `Clip` to route a message manually.
