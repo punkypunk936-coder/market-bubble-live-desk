@@ -678,6 +678,24 @@ h2 {
   background: rgba(242, 198, 112, 0.1);
 }
 
+.segmentPill {
+  width: max-content;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  margin-top: 6px;
+  margin-left: 6px;
+  border: 1px solid rgba(242, 198, 112, 0.24);
+  border-radius: 8px;
+  padding: 0 7px;
+  color: var(--gold-bright);
+  background: rgba(242, 198, 112, 0.055);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
 .matchTerms {
   display: block;
   margin-top: 5px;
@@ -709,11 +727,24 @@ h2 {
   border-color: rgba(143, 80, 255, 0.38);
 }
 
+.messageBody {
+  min-width: 0;
+}
+
 .messageText {
   min-width: 0;
   overflow-wrap: anywhere;
   font-size: 20px;
   line-height: 1.35;
+}
+
+.messageCue {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+  text-transform: uppercase;
 }
 
 .messageTime {
@@ -1237,6 +1268,42 @@ h2 {
   width: 100%;
 }
 
+.workflowFit,
+.previousEpisodes {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.workflowItem,
+.previousEpisode {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 11px;
+}
+
+.workflowItem strong,
+.previousEpisode strong {
+  display: block;
+  color: var(--gold-bright);
+  font-size: 13px;
+}
+
+.workflowItem span,
+.previousEpisode span,
+.previousEpisode p {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.38;
+}
+
+.previousEpisode .episodeTerms {
+  margin-top: 8px;
+}
+
 .queueMeta,
 .segmentItem span {
   display: block;
@@ -1453,8 +1520,11 @@ h2 {
     gap: 8px 12px;
   }
 
-  .messageText {
+  .messageBody {
     grid-column: 1 / -1;
+  }
+
+  .messageText {
     font-size: 18px;
   }
 

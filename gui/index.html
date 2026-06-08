@@ -167,6 +167,14 @@
               <div id="runOfShow" class="runOfShow"></div>
             </details>
             <details>
+              <summary>Workflow fit</summary>
+              <div id="workflowFit" class="workflowFit"></div>
+            </details>
+            <details>
+              <summary>Previous shows</summary>
+              <div id="previousEpisodes" class="previousEpisodes"></div>
+            </details>
+            <details>
               <summary>Watchlist</summary>
               <div id="watchlist" class="watchlist"></div>
             </details>
@@ -210,9 +218,13 @@
           <span class="messageChannel"></span>
           <span class="intentPill"></span>
           <span class="priorityPill"></span>
+          <span class="segmentPill"></span>
           <span class="matchTerms"></span>
         </div>
-        <p class="messageText"></p>
+        <div class="messageBody">
+          <p class="messageText"></p>
+          <div class="messageCue"></div>
+        </div>
         <time class="messageTime"></time>
         <div class="messageActions">
           <button class="messageAction primaryAction" type="button" data-action="smart">Queue</button>

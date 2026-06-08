@@ -10,21 +10,24 @@ For a plain-English business pitch, see [PRODUCT_BRIEF.md](PRODUCT_BRIEF.md).
 
 - Merges Twitch, X filtered-stream posts, and Kick chat into one feed.
 - Labels every item by source and channel/rule.
+- Adds a segment label and operator cue to each feed row so the producer can immediately see why it matters.
 - Auto-tags messages as `Question`, `Market`, `Clip`, `Culture`, or `Chat`.
 - Scores messages against the Market Bubble watchlist and exposes a `High Signal` view.
 - Shows matched watchlist terms directly on rows and queued items.
+- Suppresses exact repeated feed text over a short window so demo or live dogpile chatter does not dominate the main feed.
 - Adds `Segment Mode` for the current show block: Future-Proof, Culture Shock, Pick n' Roll, or The Price Is Wrong.
 - Adds a `Segment Lens` control to narrow the live feed to the current show block when the room gets noisy.
 - Adds `Producer Assist` with a next best move, segment heat, current queue pressure, and a copyable segment brief.
 - Adds a `Signal Radar` that ranks active watchlist topics by recent heat, source mix, and high-signal count.
 - Generates a copyable focus brief with current-segment timing, source mix, sample message, and a suggested on-air move.
-- Adds a `Latest Show Rehearsal` mode that replays a practical control-room flow from the most recent Thursday show context.
+- Adds a `Latest Show Rehearsal` mode that replays a practical control-room flow from the latest public Market Bubble episode context.
 - Lets producers queue items as on-air questions, market signals, or clip candidates.
 - Stamps queued items with the active segment, preserves the message's natural topic segment, lets operators promote or park items, and sorts the active segment to the top.
 - Persists recent feed history and the operator queue to `data/operator-state.json` so a restart does not wipe the live rundown.
 - Shows per-source freshness so operators can see whether a source is live or stale.
 - Keeps a run-of-show panel for Future-Proof, Culture Shock, Pick n' Roll, and The Price Is Wrong.
-- Runs in demo mode without credentials for review.
+- Keeps previous-show workflow notes so an external reviewer can see why the desk fits Market Bubble's format.
+- Runs in episode-aware demo mode without credentials for review.
 - Stays read-only against external platforms: it does not post back into Twitch, X, or Kick.
 
 ## Local Run
@@ -56,7 +59,7 @@ Replace the Twitch/Kick channel names with the actual live channel slugs if they
 1. Keep the main feed open during the live show.
 2. Use source toggles and search to narrow the room.
 3. Set `Segment Mode` to the current show block so the radar and queue are biased toward the right context.
-4. Before a demo or pre-show warmup, open `Latest show rehearsal` and click `Run Rehearsal` to watch the desk handle the last Thursday show flow.
+4. Before a demo or pre-show warmup, open `Latest show rehearsal` and click `Run Rehearsal` to watch the desk handle the latest public episode flow.
 5. Start from `Producer Assist`: use the next move, `Triage Mode`, or `Copy Segment Brief` when the hosts need a clean handoff.
 6. Toggle `Segment Lens` when the producer only wants messages relevant to the current block.
 7. Use the `View` controls to isolate questions, market signals, clip candidates, or culture chatter.
@@ -85,7 +88,9 @@ See [DEPLOYMENT.md](DEPLOYMENT.md).
 | Variable | Purpose |
 | --- | --- |
 | `PORT` | Local HTTP port. Defaults to `8899`. |
-| `DEMO_MODE` | `1` emits sample Kick/X/Twitch messages. |
+| `HOST` | Bind host. Defaults to `0.0.0.0` for cloud deploys. |
+| `TEXT_REPEAT_SUPPRESS_MS` | Suppresses exact repeated feed text for this many milliseconds. Defaults to `120000`. |
+| `DEMO_MODE` | `1` emits episode-aware sample Kick/X/Twitch messages. |
 | `WORKSPACE_NAME` | Header title. Defaults to `Market Bubble Live Desk`. |
 | `WORKSPACE_CONTEXT` | Comma-separated context chips. |
 | `WORKSPACE_WATCHLIST` | Comma-separated watchlist chips. |

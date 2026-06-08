@@ -10,10 +10,12 @@ const STATIC_DIR = path.join(ROOT, "gui");
 const DATA_DIR = path.join(ROOT, "data");
 const STATE_FILE = path.join(DATA_DIR, "operator-state.json");
 const PORT = Number(process.env.PORT || 8899);
+const HOST = process.env.HOST || "0.0.0.0";
 const HISTORY_LIMIT = Number(process.env.HISTORY_LIMIT || 500);
 const RECONNECT_MIN_MS = 1000;
 const RECONNECT_MAX_MS = 30000;
 const PERSIST_DEBOUNCE_MS = 250;
+const TEXT_REPEAT_SUPPRESS_MS = Number(process.env.TEXT_REPEAT_SUPPRESS_MS || 120000);
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -42,34 +44,80 @@ const appConfig = {
   context: envList("WORKSPACE_CONTEXT").length
     ? envList("WORKSPACE_CONTEXT")
     : ["Banks + Ansem", "Prediction markets", "Crypto + AI", "Sports + culture", "Thursdays 1PM PST"],
+  previousEpisodes: [
+    {
+      title: "The Dollar Is Going to Zero",
+      airDate: "June 5, 2026",
+      themes: ["Bitcoin caution", "Hyperliquid strength", "Venice AI", "compounding"],
+      deskFit: "Track market caution, AI rails, and clip-worthy guest moments in separate queues.",
+    },
+    {
+      title: "Why Ansem Thinks Ethereum Is Done..",
+      airDate: "May 22, 2026",
+      themes: ["Ethereum debate", "Akash compute", "Crypto Twitter rankings", "Bullpen baseball spreads"],
+      deskFit: "Route ETH/HYPE/compute into market or Future-Proof while Bullpen stays in Pick n' Roll.",
+    },
+    {
+      title: "How to Get Rich Playing GTA 6",
+      airDate: "May 15, 2026",
+      themes: ["GTA 6", "HyperLiquid", "SpaceX", "attention economy", "sports investing"],
+      deskFit: "Catch culture moments without losing market questions and prediction-market links.",
+    },
+    {
+      title: "Why AI Is Beating Crypto Right Now",
+      airDate: "May 8, 2026",
+      themes: ["AI boom", "tickers", "clipping meta", "investing with limited time"],
+      deskFit: "Surface practical viewer questions and clip candidates during AI versus crypto debates.",
+    },
+    {
+      title: "The Truth About Crypto in 2026",
+      airDate: "May 1, 2026",
+      themes: ["Solana", "major coins", "For You content", "misinformation", "Dead Internet Theory", "AI infrastructure", "GTA 6", "FaZe"],
+      deskFit: "Keep crypto, AI, and culture lanes clean so the hosts can move fast without tab switching.",
+    },
+  ],
+  workflowFit: [
+    {
+      label: "Best fit",
+      body: "Market Bubble repeatedly jumps across crypto, AI, culture, sports, and live audience speculation, so the desk should route signals by segment instead of showing raw chat as one stream.",
+    },
+    {
+      label: "Producer job",
+      body: "The operator should watch for questions, market signals, and clips, then hand hosts a concise queue instead of explaining the whole feed.",
+    },
+    {
+      label: "Missing without this",
+      body: "The team loses the thread when Polymarket, Bullpen, CT, Kick, Twitch, and guest reactions all move at once.",
+    },
+  ],
   latestEpisode: {
-    title: "Latest Thursday Show Rehearsal",
-    airDate: "June 4, 2026",
-    sourceNote: "Built from public Market Bubble clips and crypto market recaps published after the latest Thursday show.",
-    thesis: "Operate the BTC 60K liquidation conversation first, then route Bullpen, Zcash, NEAR, AI agents, and Polymarket reactions into the right live segment.",
+    title: "The Dollar Is Going to Zero",
+    airDate: "June 5, 2026",
+    sourceNote: "Built from the latest public Market Bubble episode listing and the show's public format.",
+    thesis: "Operate the latest public episode flow first: Bitcoin caution, Hyperliquid conviction, Venice AI, guest-room energy, and Flood's compounding close.",
     segments: [
       {
         segment: "The Price Is Wrong",
-        beat: "BTC 60K support, funding, and long-liquidation risk",
-        producerGoal: "Queue one clean BTC question, one market-structure signal, and one clip-worthy host prompt.",
-      },
-      {
-        segment: "Pick n' Roll",
-        beat: "Bullpen competition and sports-market movement",
-        producerGoal: "Catch odds movement and anything that should become a recurring leaderboard beat.",
-      },
-      {
-        segment: "The Price Is Wrong",
-        beat: "Zcash privacy thesis after a violent repricing",
-        producerGoal: "Separate real privacy demand from CT hype and route a concise mispricing question.",
+        beat: "Bitcoin caution versus Hyperliquid conviction",
+        producerGoal: "Queue one clean market-invalidation question and one practical position-sizing signal.",
       },
       {
         segment: "Future-Proof",
-        beat: "NEAR, AI agents, and private machine-to-machine money rails",
-        producerGoal: "Ask what is investable now versus what is just a long-term infra narrative.",
+        beat: "Venice AI and private AI as a real product, not just an AI wrapper",
+        producerGoal: "Separate investable infrastructure from product hype and save one plain-English host prompt.",
+      },
+      {
+        segment: "Culture Shock",
+        beat: "Mike Majlak guest energy and the clips that can travel after the episode",
+        producerGoal: "Catch quotable reactions without letting culture chatter bury market questions.",
+      },
+      {
+        segment: "Future-Proof",
+        beat: "Flood's power-law compounding close",
+        producerGoal: "Turn the closing thesis into a concise clip or follow-up question for the next show.",
       },
     ],
-    watchTerms: ["BTC 60K", "liquidations", "Bitcoin", "funding", "open interest", "Bullpen Competition", "Zcash", "ZEC", "NEAR", "AI agents", "Polymarket"],
+    watchTerms: ["Bitcoin", "BTC", "HyperLiquid", "HYPE", "Venice AI", "compounding", "Polymarket", "AI compute", "guest"],
   },
   segments: [
     {
@@ -124,6 +172,7 @@ const state = {
   },
   clients: new Set(),
   seen: new Map(),
+  recentText: new Map(),
   counts: { twitch: 0, x: 0, kick: 0, system: 0 },
   sources: {
     twitch: { enabled: false, status: "idle", detail: "No channels configured.", channels: [], lastMessageAt: null },
@@ -233,6 +282,29 @@ function compactSeen() {
   keys.forEach((key) => state.seen.delete(key));
 }
 
+function normalizeTextForDedupe(text) {
+  return String(text || "")
+    .toLowerCase()
+    .replace(/https?:\/\/\S+/g, "")
+    .replace(/[^\w\s$.-]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function shouldSuppressRepeatText(text, now = Date.now()) {
+  if (!TEXT_REPEAT_SUPPRESS_MS) return false;
+  const key = normalizeTextForDedupe(text);
+  if (key.length < 24) return false;
+  const previous = state.recentText.get(key);
+  state.recentText.set(key, now);
+  if (state.recentText.size > HISTORY_LIMIT * 3) {
+    for (const [storedKey, seenAt] of state.recentText) {
+      if (now - seenAt > TEXT_REPEAT_SUPPRESS_MS) state.recentText.delete(storedKey);
+    }
+  }
+  return previous && now - previous < TEXT_REPEAT_SUPPRESS_MS;
+}
+
 function sendSse(res, event, payload) {
   res.write(`event: ${event}\n`);
   res.write(`data: ${JSON.stringify(payload)}\n\n`);
@@ -288,10 +360,12 @@ function scoreMessage({ source, text, intent }) {
 
 function pushMessage(input) {
   const receivedAt = new Date().toISOString();
+  const now = Date.now();
   const source = input.source || "system";
   const id = input.id || hashId([source, input.channel, input.user, input.text, input.createdAt || receivedAt]);
   const dedupeKey = `${source}:${id}`;
   if (state.seen.has(dedupeKey)) return null;
+  if (!input.meta?.allowRepeat && shouldSuppressRepeatText(input.text, now)) return null;
   state.seen.set(dedupeKey, Date.now());
   compactSeen();
 
@@ -386,10 +460,10 @@ function publicState() {
 const latestShowRehearsalMessages = [
   {
     source: "x",
-    channel: "MarketBubble clip",
+    channel: "MarketBubble episode",
     user: "MarketBubble",
     displayName: "Market Bubble",
-    text: "Latest show clip: Ansem's BTC 60K call turned into the room's liquidation question.",
+    text: "Latest public episode flow: Bitcoin caution first, Hyperliquid conviction second, then keep one clean clip from the close.",
     segment: "The Price Is Wrong",
     queueKind: "signal",
     switchSegment: "The Price Is Wrong",
@@ -398,7 +472,7 @@ const latestShowRehearsalMessages = [
     source: "kick",
     channel: "market-bubble",
     user: "riskdesk",
-    text: "Ask Ansem what invalidates the BTC 60K breakdown if funding cools off before the next wick.",
+    text: "Ask Ansem what would make him stop being cautious on Bitcoin in the short term.",
     segment: "The Price Is Wrong",
     queueKind: "question",
   },
@@ -406,14 +480,14 @@ const latestShowRehearsalMessages = [
     source: "twitch",
     channel: "live-show",
     user: "chartwatcher",
-    text: "Polymarket should have a Bitcoin below 60K retest market after those liquidations.",
+    text: "Turn the Hyperliquid bullishness into a host prompt: product strength, valuation, or trader reflexivity?",
     segment: "The Price Is Wrong",
   },
   {
     source: "x",
-    channel: "crypto tape",
-    user: "liq_map",
-    text: "Open interest is still sticky after the BTC 60K move; feels like forced sellers can drive the next leg.",
+    channel: "HYPE tape",
+    user: "perpdesk",
+    text: "HYPE mention needs the operator tag: thesis, time horizon, invalidation, and whether it is clip-worthy.",
     segment: "The Price Is Wrong",
     queueKind: "signal",
   },
@@ -421,63 +495,63 @@ const latestShowRehearsalMessages = [
     source: "kick",
     channel: "market-bubble",
     user: "clipstack",
-    text: "Clip candidate: don't chase the wick, trade the forced seller.",
+    text: "Clip candidate: cautious on Bitcoin, bullish on products people actually use.",
     segment: "The Price Is Wrong",
     queueKind: "clip",
   },
   {
     source: "x",
-    channel: "Bullpen Competition",
-    user: "line_mover",
-    text: "Bullpen Competition angle: which baseball markets moved before the room caught them?",
-    segment: "Pick n' Roll",
+    channel: "Venice AI",
+    user: "private_compute",
+    text: "Venice AI topic fits Future-Proof: private AI, compute scarcity, and what users actually pay for.",
+    segment: "Future-Proof",
     queueKind: "question",
-    switchSegment: "Pick n' Roll",
+    switchSegment: "Future-Proof",
   },
   {
     source: "twitch",
     channel: "live-show",
-    user: "parlaydesk",
-    text: "Banks should turn Bullpen into a weekly leaderboard segment, not just a one-off competition.",
-    segment: "Pick n' Roll",
+    user: "agenticflow",
+    text: "Ask Erik Voorhees where private AI is already a product and where it is still just a belief.",
+    segment: "Future-Proof",
     queueKind: "signal",
   },
   {
     source: "kick",
     channel: "market-bubble",
-    user: "oddsreader",
-    text: "Pick n' Roll needs the actual line, entry price, and why the room thinks it is mispriced.",
-    segment: "Pick n' Roll",
+    user: "infraonly",
+    text: "Future-Proof queue should split AI wrappers from real AI infrastructure before the hosts move on.",
+    segment: "Future-Proof",
   },
   {
     source: "x",
-    channel: "privacy tape",
-    user: "shieldedflow",
-    text: "Zcash and ZEC are the clean Price Is Wrong debate: privacy demand versus CT momentum.",
-    segment: "The Price Is Wrong",
+    channel: "Guest room",
+    user: "studioenergy",
+    text: "Mike Majlak brought culture energy; queue only the parts that become a clip or a real host handoff.",
+    segment: "Culture Shock",
     queueKind: "signal",
-    switchSegment: "The Price Is Wrong",
+    switchSegment: "Culture Shock",
   },
   {
     source: "twitch",
     channel: "live-show",
-    user: "privacymax",
-    text: "Ask if Zcash is actually mispriced after the bug/liquidity reset or if the thesis got weaker.",
-    segment: "The Price Is Wrong",
+    user: "clipper",
+    text: "Culture Shock should not swallow the show; save the funniest guest moment and get back to the market thesis.",
+    segment: "Culture Shock",
     queueKind: "question",
   },
   {
     source: "kick",
     channel: "market-bubble",
-    user: "probabilitynerd",
-    text: "Polymarket angle: what odds would make a ZEC recovery trade worth discussing on air?",
-    segment: "The Price Is Wrong",
+    user: "producerchat",
+    text: "Good operator move: if Banks riffs for 30 seconds, mark the line as clip; if he asks for numbers, mark signal.",
+    segment: "Culture Shock",
   },
   {
     source: "x",
-    channel: "AI agents",
-    user: "agentrails",
-    text: "NEAR plus AI agents is Future-Proof if private machine payments become an actual rail.",
+    channel: "Compounding",
+    user: "powerlaw",
+    text: "Flood's power-law point needs a follow-up: what does the desk actually buy and hold through noise?",
     segment: "Future-Proof",
     queueKind: "signal",
     switchSegment: "Future-Proof",
@@ -485,8 +559,8 @@ const latestShowRehearsalMessages = [
   {
     source: "kick",
     channel: "market-bubble",
-    user: "infraonly",
-    text: "Ask what is investable in NEAR and AI agents right now versus what is just the 2030 pitch.",
+    user: "compounding",
+    text: "Ask Flood for one compounding mistake people make when they are constantly chasing the next ticker.",
     segment: "Future-Proof",
     queueKind: "question",
   },
@@ -494,7 +568,7 @@ const latestShowRehearsalMessages = [
     source: "twitch",
     channel: "live-show",
     user: "deskproducer",
-    text: "Rundown should end with BTC 60K, Bullpen Competition, Zcash, then NEAR AI agents.",
+    text: "Best rundown order from the latest public episode: Bitcoin caution, Hyperliquid, Venice AI, guest clip, compounding close.",
     segment: "Future-Proof",
     queueKind: "clip",
   },
@@ -734,6 +808,16 @@ async function handleApi(req, res, pathname) {
 
 const server = http.createServer((req, res) => {
   const parsed = new URL(req.url || "/", `http://${req.headers.host || "127.0.0.1"}`);
+  if (parsed.pathname === "/healthz") {
+    jsonResponse(res, 200, {
+      ok: true,
+      service: appConfig.workspaceName,
+      bootedAt: state.bootedAt,
+      history: state.history.length,
+      sources: Object.fromEntries(Object.entries(state.sources).map(([source, item]) => [source, item.status])),
+    });
+    return;
+  }
   if (parsed.pathname === "/events") {
     handleEvents(req, res);
     return;
@@ -1098,17 +1182,41 @@ function startX() {
 
 function startDemo() {
   const samples = [
-    { source: "kick", channel: "market-bubble", user: "user91", text: "HYPE just different, is this The Price Is Wrong?" },
-    { source: "x", channel: "Polymarket OR Bullpen", user: "ct_user1337", text: "Bullpen spreads on baseball are starting to move before the desk mentions it" },
-    { source: "twitch", channel: "live-show", user: "user67", text: "Ask Ansem why ETH is lagging if compute is the trade" },
-    { source: "kick", channel: "market-bubble", user: "mod_alpha", text: "Culture Shock segment should hit the GTA 6 market next" },
-    { source: "twitch", channel: "live-show", user: "chartwatcher", text: "clip that Banks quote, attention is still the new EBITDA" },
-    { source: "x", channel: "Market Bubble watchlist", user: "timeline_pro", text: "Polymarket odds moved 6 points during the Future-Proof block" },
+    { source: "x", channel: "The Dollar Is Going to Zero", user: "ct_riskdesk", text: "BTC caution is the headline, but HYPE and HyperLiquid strength is the actual split-screen market signal.", segment: "The Price Is Wrong" },
+    { source: "kick", channel: "market-bubble", user: "macro_guest", text: "Ask Ansem if Bitcoin is weak because liquidity is leaving crypto or because AI is taking the whole risk budget.", segment: "The Price Is Wrong" },
+    { source: "twitch", channel: "live-show", user: "clipwatch", text: "Clip the moment where Banks asks whether the dollar-zero thesis is real or just crypto cope.", segment: "The Price Is Wrong" },
+    { source: "x", channel: "Venice AI", user: "agenticflow", text: "Venice AI topic fits Future-Proof: private AI, compute scarcity, and what users actually pay for.", segment: "Future-Proof" },
+    { source: "kick", channel: "market-bubble", user: "compounding", text: "Flood's power-law point needs a follow-up: what does the desk actually buy and hold through noise?", segment: "The Price Is Wrong" },
+    { source: "x", channel: "ETH debate", user: "ethbear", text: "Why Ansem thinks Ethereum is done is a clean Price Is Wrong segment if someone brings actual odds or flows.", segment: "The Price Is Wrong" },
+    { source: "twitch", channel: "live-show", user: "validatorwatch", text: "Ask whether ETH weakness is structural, narrative rotation, or just a crowded short-term trade.", segment: "The Price Is Wrong" },
+    { source: "kick", channel: "market-bubble", user: "akash_builder", text: "Akash compute belongs in Future-Proof: if compute is money, who captures margin?", segment: "Future-Proof" },
+    { source: "x", channel: "Crypto Twitter", user: "top25watch", text: "TraderMayne ranking CT figures is Culture Shock unless it turns into tradeable attention or Polymarket odds.", segment: "Culture Shock" },
+    { source: "kick", channel: "Bullpen baseball", user: "line_reader", text: "Bullpen baseball spread moved before the hosts got there; queue the line, price, and why it moved.", segment: "Pick n' Roll" },
+    { source: "twitch", channel: "live-show", user: "sportsbookish", text: "Pick n' Roll should show the entry number and whether Polymarket agrees with the baseball book.", segment: "Pick n' Roll" },
+    { source: "x", channel: "GTA 6 markets", user: "culturearb", text: "GTA 6 is not just culture; the attention market around release timing and creator economics is the trade.", segment: "Culture Shock" },
+    { source: "kick", channel: "market-bubble", user: "attentiondesk", text: "Ask Banks to explain 'attention is the new EBITDA' in one sentence for the clipping team.", segment: "Culture Shock" },
+    { source: "twitch", channel: "live-show", user: "watchcollector", text: "Watches, streaming, and sports investing all fit if the desk frames them as status markets.", segment: "Culture Shock" },
+    { source: "x", channel: "HyperLiquid", user: "perpsdesk", text: "HyperLiquid and HYPE keep surviving BTC weakness; ask if that is product-market fit or late-cycle leverage.", segment: "Future-Proof" },
+    { source: "kick", channel: "market-bubble", user: "spacex_odds", text: "SpaceX should be a Future-Proof beat only if someone can tie it to a Polymarket or capital-markets angle.", segment: "Future-Proof" },
+    { source: "twitch", channel: "live-show", user: "nuclear_bull", text: "Nuclear energy chat is heating up; queue it if AI compute demand is the reason, not just a random tangent.", segment: "Future-Proof" },
+    { source: "x", channel: "AI beats crypto", user: "aicapex", text: "Why AI is beating crypto right now: capital formation, visible customers, and fewer circular narratives.", segment: "Future-Proof" },
+    { source: "kick", channel: "market-bubble", user: "smallstack", text: "Ask NotSoEasyMoney for one practical setup for viewers with limited time and limited bankroll.", segment: "The Price Is Wrong" },
+    { source: "twitch", channel: "live-show", user: "clippingmeta", text: "Mizkif saying clipping meta hurts livestreaming is a Culture Shock clip, not a market signal.", segment: "Culture Shock" },
+    { source: "x", channel: "ticker watch", user: "tickertape", text: "Ansem's ticker mentions need a queue tag: thesis, time horizon, invalidation, then clip if he gives a clean line.", segment: "The Price Is Wrong" },
+    { source: "kick", channel: "market-bubble", user: "solana_user", text: "Solana question: is the market punishing majors or just rotating to AI-adjacent infrastructure?", segment: "The Price Is Wrong" },
+    { source: "twitch", channel: "live-show", user: "deadweb", text: "Dead Internet Theory belongs in Culture Shock unless it turns into a Polymarket on bot traffic.", segment: "Culture Shock" },
+    { source: "x", channel: "For You feed", user: "feedtheory", text: "For You content and misinformation are the show workflow test: culture chatter becomes marketable only with a measurable outcome.", segment: "Culture Shock" },
+    { source: "kick", channel: "market-bubble", user: "faze_next", text: "Next evolution of FaZe is a culture segment; queue only if Banks gives a specific operating lesson.", segment: "Culture Shock" },
+    { source: "twitch", channel: "live-show", user: "producer_note", text: "Operator note: current beat needs one host question, one market signal, and one clip before moving segments.", segment: "The Price Is Wrong" },
+    { source: "x", channel: "Polymarket US", user: "marketstructure", text: "Polymarket US callout should become a short host prompt: what changes when prediction markets go mainstream?", segment: "The Price Is Wrong" },
+    { source: "kick", channel: "market-bubble", user: "guest_tracker", text: "Guest moment: when the guest gives a number, queue it as a signal; when they give a phrase, queue it as a clip.", segment: "The Price Is Wrong" },
+    { source: "twitch", channel: "live-show", user: "questionstack", text: "Ask what would make Ansem change his mind on BTC, ETH, or HYPE in the next two weeks.", segment: "The Price Is Wrong" },
+    { source: "x", channel: "rundown desk", user: "showrunner", text: "Best rundown order today: market mispricing first, Future-Proof second, Culture Shock third, Pick n' Roll when a real line moves.", segment: "The Price Is Wrong" },
   ];
   let index = 0;
-  publishStatus("twitch", "demo", "Demo messages are enabled.", { enabled: true, channels: ["stream"] });
-  publishStatus("kick", "demo", "Demo messages are enabled.", { enabled: true, channels: ["market-bubble"] });
-  publishStatus("x", "demo", "Demo messages are enabled.", { enabled: true, rules: ["HYPE OR polymarket"] });
+  publishStatus("twitch", "demo", "Show-aware demo pulse is enabled.", { enabled: true, channels: ["live-show"] });
+  publishStatus("kick", "demo", "Show-aware demo pulse is enabled.", { enabled: true, channels: ["market-bubble"] });
+  publishStatus("x", "demo", "Show-aware demo pulse is enabled.", { enabled: true, rules: ["Market Bubble", "Polymarket", "Bullpen", "Ansem", "Banks"] });
 
   setInterval(() => {
     const sample = samples[index % samples.length];
@@ -1118,14 +1226,20 @@ function startDemo() {
       id: hashId(["demo", index, sample.source, Date.now()]),
       displayName: sample.user,
       createdAt: new Date().toISOString(),
+      meta: {
+        ...(sample.meta || {}),
+        demoPulse: true,
+        episodeAware: true,
+      },
     });
-  }, Number(process.env.DEMO_INTERVAL_MS || 1800));
+  }, Number(process.env.DEMO_INTERVAL_MS || 3200));
 }
 
 loadRuntimeState();
 
-server.listen(PORT, () => {
-  console.log(`Unified chat aggregator running at http://127.0.0.1:${PORT}`);
+server.listen(PORT, HOST, () => {
+  const localUrl = HOST === "0.0.0.0" || HOST === "::" ? `http://127.0.0.1:${PORT}` : `http://${HOST}:${PORT}`;
+  console.log(`Unified chat aggregator running at ${localUrl}`);
   console.log("Configure TWITCH_CHANNELS, KICK_CHANNELS, and X_BEARER_TOKEN for live sources.");
   startTwitch();
   startKick();

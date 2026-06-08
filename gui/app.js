@@ -153,6 +153,16 @@ function passesFilters(message) {
     .some((part) => String(part).toLowerCase().includes(query));
 }
 
+function operatorCueForMessage(message) {
+  const segment = segmentForMessage(message);
+  const terms = (message.matchedTerms || []).slice(0, 3).join(", ");
+  if (message.intent === "question") return `${segment} ask${terms ? ` · ${terms}` : ""}`;
+  if (message.intent === "clip") return `${segment} clip candidate${terms ? ` · ${terms}` : ""}`;
+  if (message.intent === "culture") return `${segment} context${terms ? ` · ${terms}` : ""}`;
+  if (message.intent === "market") return `${segment} market signal${terms ? ` · ${terms}` : ""}`;
+  return `${segment} watch item${terms ? ` · ${terms}` : ""}`;
+}
+
 function renderMessage(message, flash = false) {
   const template = $("messageTemplate").content.cloneNode(true);
   const row = template.querySelector(".messageRow");
@@ -163,8 +173,10 @@ function renderMessage(message, flash = false) {
   const channel = template.querySelector(".messageChannel");
   const intent = template.querySelector(".intentPill");
   const priority = template.querySelector(".priorityPill");
+  const segment = template.querySelector(".segmentPill");
   const matchTerms = template.querySelector(".matchTerms");
   const text = template.querySelector(".messageText");
+  const cue = template.querySelector(".messageCue");
   const time = template.querySelector(".messageTime");
   const actions = template.querySelectorAll(".messageAction");
 
@@ -185,8 +197,10 @@ function renderMessage(message, flash = false) {
   intent.classList.add(message.intent || "chat");
   priority.textContent = priorityLabel(message.priority);
   if (message.priority) priority.classList.add(message.priority);
+  segment.textContent = segmentForMessage(message);
   matchTerms.textContent = (message.matchedTerms || []).join(", ");
   text.textContent = escapeText(message.text);
+  cue.textContent = operatorCueForMessage(message);
   time.textContent = formatTime(message.createdAt || message.receivedAt);
   time.dateTime = message.createdAt || message.receivedAt || "";
   actions.forEach((button) => {
@@ -296,6 +310,46 @@ function renderEpisodeBrief() {
   `;
 }
 
+function renderWorkflowFit() {
+  const node = $("workflowFit");
+  if (!node) return;
+  const items = state.config.workflowFit || [];
+  if (!items.length) {
+    node.innerHTML = `<div class="emptyState compact">No workflow fit notes configured.</div>`;
+    return;
+  }
+  node.innerHTML = items
+    .map((item) => `
+      <div class="workflowItem">
+        <strong>${escapeHtml(item.label || "Workflow")}</strong>
+        <span>${escapeHtml(item.body || "")}</span>
+      </div>
+    `)
+    .join("");
+}
+
+function renderPreviousEpisodes() {
+  const node = $("previousEpisodes");
+  if (!node) return;
+  const episodes = state.config.previousEpisodes || [];
+  if (!episodes.length) {
+    node.innerHTML = `<div class="emptyState compact">No previous-show context configured.</div>`;
+    return;
+  }
+  node.innerHTML = episodes
+    .map((episode) => `
+      <article class="previousEpisode">
+        <div>
+          <strong>${escapeHtml(episode.title || "Market Bubble episode")}</strong>
+          <span>${escapeHtml(episode.airDate || "")}</span>
+        </div>
+        <p>${escapeHtml(episode.deskFit || "")}</p>
+        <div class="episodeTerms">${(episode.themes || []).slice(0, 6).map((theme) => `<span>${escapeHtml(theme)}</span>`).join("")}</div>
+      </article>
+    `)
+    .join("");
+}
+
 function renderConfig() {
   const config = state.config || {};
   const name = config.workspaceName || "Market Bubble Live Desk";
@@ -347,6 +401,8 @@ function renderConfig() {
     .map((item) => `<span class="watchChip">${escapeHtml(item)}</span>`)
     .join("");
   renderEpisodeBrief();
+  renderWorkflowFit();
+  renderPreviousEpisodes();
 }
 
 function segmentForTerm(term, sample) {

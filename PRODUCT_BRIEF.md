@@ -36,8 +36,10 @@ It:
 
 - combines Twitch, Kick, and X into one real-time feed
 - labels every message by source
+- shows the segment and operator cue for each message so the feed is easier to read quickly
 - detects questions, market signals, culture chatter, and clip candidates
 - scores high-signal messages against the Market Bubble watchlist
+- suppresses exact repeated text so one recycled line does not take over the feed
 - lets the producer set the current Market Bubble segment
 - lets the producer narrow the feed through the current segment when the room gets noisy
 - gives the producer a compact next-move assist panel and copyable segment brief
@@ -45,6 +47,7 @@ It:
 - lets the producer queue items for the hosts
 - creates copyable focus briefs and segment-grouped rundowns
 - lets the team run a latest-show rehearsal so operators can see how the desk handles a real Market Bubble flow before going live
+- includes prior-show context so the workflow maps to real Market Bubble episodes, not a generic chat dashboard
 - keeps the queue saved if the server restarts
 - shows whether each source is live or stale
 
@@ -99,7 +102,7 @@ That difference matters.
 The product is contextual. It understands:
 
 - Market Bubble segments
-- latest-show beats like BTC 60K, liquidations, Bullpen, Zcash, NEAR, AI agents, and Polymarket
+- prior-show and weekly-radar beats like BTC caution, HyperLiquid, Ethereum, Akash compute, GTA 6, AI versus crypto, Bullpen baseball, Zcash, NEAR, AI agents, and Polymarket
 - source labels
 - high-signal audience questions
 - clip-worthy moments
