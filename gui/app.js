@@ -458,7 +458,7 @@ function renderConfig() {
   const contextChips = (config.context || [])
     .map((item) => `<span class="contextChip">${escapeHtml(item)}</span>`)
     .join("");
-  $("contextRail").innerHTML = `${segmentControls}<div class="contextChips">${contextChips}</div>`;
+  $("contextRail").innerHTML = `${segmentControls}<div class="contextChips" hidden>${contextChips}</div>`;
   $("runOfShow").innerHTML = (config.segments || [])
     .map(
       (segment) => `
@@ -841,18 +841,25 @@ function updateConnectionLight() {
 }
 
 function renderActiveFilterBar() {
-  const activeSources = [...state.filters].map((source) => sourceNames[source] || source).join(" + ");
   const type = state.intentFilter === "all" ? "All message types" : state.intentFilter === "high" ? "High signal" : intentLabel(state.intentFilter);
   const scopedMessages = state.messages.filter((message) =>
     state.filters.has(message.source) &&
     (!state.segmentLens || segmentForMessage(message) === currentSegmentName())
   );
   const highCount = scopedMessages.filter((message) => message.priority === "high").length;
-  const query = state.query.trim() ? `Search: "${state.query.trim()}"` : "No search";
-  const focus = state.focusTerm ? `Focus: ${state.focusTerm}` : "No radar focus";
-  const lens = state.segmentLens ? "Segment lens on" : "Segment lens off";
-  const decision = state.decisionFilter === "all" ? "All operator reads" : `Decision: ${state.decisionFilter}`;
-  $("activeFilterBar").textContent = `${activeSources || "No sources"} · ${type} · ${decision} · Segment: ${currentSegmentName()} · ${lens} · ${query} · ${focus} · ${highCount} high-signal items`;
+  const useNow = scopedMessages.filter((message) => decisionForMessage(message).status === "use").length;
+  const parts = [
+    currentSegmentName(),
+    `${state.visibleCount || scopedMessages.length} visible`,
+    `${useNow} use now`,
+    `${highCount} high`,
+  ];
+  if (state.decisionFilter !== "all") parts.push(state.decisionFilter);
+  if (state.intentFilter !== "all") parts.push(type);
+  if (state.segmentLens) parts.push("lens on");
+  if (state.query.trim()) parts.push(`search: ${state.query.trim()}`);
+  if (state.focusTerm) parts.push(`focus: ${state.focusTerm}`);
+  $("activeFilterBar").textContent = parts.join(" · ");
 }
 
 function applySnapshot(payload) {
@@ -1375,15 +1382,17 @@ function bindControls() {
     renderFeed();
   });
 
-  $("testForm").addEventListener("submit", async (event) => {
-    event.preventDefault();
-    await postJson("/api/demo-message", {
-      source: $("testSource").value,
-      channel: "manual",
-      user: $("testUser").value,
-      text: $("testText").value,
+  if ($("testForm")) {
+    $("testForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      await postJson("/api/demo-message", {
+        source: $("testSource").value,
+        channel: "manual",
+        user: $("testUser").value,
+        text: $("testText").value,
+      });
     });
-  });
+  }
 }
 
 bindControls();

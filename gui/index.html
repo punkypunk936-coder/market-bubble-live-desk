@@ -22,10 +22,6 @@
             <span class="icon pauseIcon" aria-hidden="true"></span>
             <span id="pauseLabel">Pause</span>
           </button>
-          <button id="clearBtn" class="controlButton dangerButton" type="button" title="Clear feed" aria-label="Clear feed">
-            <span class="icon clearIcon" aria-hidden="true"></span>
-            <span>Clear</span>
-          </button>
         </div>
       </header>
 
@@ -46,7 +42,7 @@
           <div id="contextRail" class="contextRail"></div>
 
           <div class="feedToolbar">
-            <div class="toolbarGroup">
+            <div class="toolbarGroup sourceGroup">
               <div class="toolbarLabel">Sources</div>
               <div class="sourceToggles" role="group" aria-label="Source filters">
                 <button class="sourceToggle kick active" type="button" data-source="kick">
@@ -64,29 +60,36 @@
               </div>
             </div>
 
-            <div class="toolbarGroup">
-              <div class="toolbarLabel">View</div>
-              <div class="viewToggles" role="group" aria-label="Message type filters">
-                <button class="viewToggle active" type="button" data-intent="all">All</button>
-                <button class="viewToggle" type="button" data-intent="high">High Signal</button>
-                <button class="viewToggle" type="button" data-intent="question">Questions</button>
-                <button class="viewToggle" type="button" data-intent="market">Markets</button>
-                <button class="viewToggle" type="button" data-intent="clip">Clips</button>
-                <button class="viewToggle" type="button" data-intent="culture">Culture</button>
-              </div>
-            </div>
-
-            <div class="toolbarGroup compactControls">
-              <div class="toolbarLabel">Controls</div>
-              <button id="autoScrollBtn" class="toggleButton active" type="button">Auto-scroll</button>
-              <button id="densityBtn" class="toggleButton" type="button">Dense</button>
-              <button id="segmentLensBtn" class="toggleButton" type="button">Segment Lens</button>
-            </div>
-
             <label class="searchBox">
               <span aria-hidden="true"></span>
               <input id="searchInput" type="search" placeholder="Search feed" autocomplete="off" />
             </label>
+
+            <details class="advancedFilters">
+              <summary>Filters</summary>
+              <div class="advancedFilterGrid">
+                <div>
+                  <div class="toolbarLabel">Type</div>
+                  <div class="viewToggles" role="group" aria-label="Message type filters">
+                    <button class="viewToggle active" type="button" data-intent="all">All</button>
+                    <button class="viewToggle" type="button" data-intent="high">High Signal</button>
+                    <button class="viewToggle" type="button" data-intent="question">Questions</button>
+                    <button class="viewToggle" type="button" data-intent="market">Markets</button>
+                    <button class="viewToggle" type="button" data-intent="clip">Clips</button>
+                    <button class="viewToggle" type="button" data-intent="culture">Culture</button>
+                  </div>
+                </div>
+                <div>
+                  <div class="toolbarLabel">Display</div>
+                  <div class="compactControls">
+                    <button id="autoScrollBtn" class="toggleButton active" type="button">Auto-scroll</button>
+                    <button id="densityBtn" class="toggleButton" type="button">Dense</button>
+                    <button id="segmentLensBtn" class="toggleButton" type="button">Segment Lens</button>
+                    <button id="clearBtn" class="toggleButton dangerInline" type="button">Clear</button>
+                  </div>
+                </div>
+              </div>
+            </details>
           </div>
 
           <div id="activeFilterBar" class="activeFilterBar"></div>
@@ -155,7 +158,7 @@
                 <div class="blockSubhead">Segments and watchlist</div>
               </div>
             </div>
-            <details open>
+            <details>
               <summary>Latest show rehearsal</summary>
               <div id="episodeBrief" class="episodeBrief"></div>
               <div class="episodeActions">
@@ -168,41 +171,17 @@
               <div id="runOfShow" class="runOfShow"></div>
             </details>
             <details>
-              <summary>Workflow fit</summary>
-              <div id="workflowFit" class="workflowFit"></div>
-            </details>
-            <details>
-              <summary>Previous shows</summary>
-              <div id="previousEpisodes" class="previousEpisodes"></div>
-            </details>
-            <details>
               <summary>Watchlist</summary>
               <div id="watchlist" class="watchlist"></div>
             </details>
           </section>
 
-          <section class="panelBlock">
-            <div class="blockHeader">
-              <div>
-                <h2>Sources</h2>
-                <span id="clientCount" class="smallPill">0 viewers</span>
-              </div>
-            </div>
+          <details class="panelBlock sourcePanel">
+            <summary>
+              <span>Source Health</span>
+              <span id="clientCount" class="smallPill">0 viewers</span>
+            </summary>
             <div id="sourceStatus" class="sourceStatus"></div>
-          </section>
-
-          <details class="panelBlock demoBlock">
-            <summary>Demo pulse</summary>
-            <form id="testForm" class="testForm">
-              <select id="testSource" aria-label="Test source">
-                <option value="kick">Kick</option>
-                <option value="x">X</option>
-                <option value="twitch">Twitch</option>
-              </select>
-              <input id="testUser" type="text" value="operator" aria-label="Test username" />
-              <textarea id="testText" rows="3" aria-label="Test message">Ask Ansem which market is most mispriced right now.</textarea>
-              <button type="submit" class="primaryButton">Send Test</button>
-            </form>
           </details>
         </aside>
       </main>

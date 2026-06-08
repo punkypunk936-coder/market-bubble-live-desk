@@ -9,6 +9,8 @@
   --muted: #a99d8c;
   --gold: #f2c670;
   --gold-bright: #ffe2a0;
+  --cyan: #7bdcff;
+  --green-soft: #b9ffa5;
   --kick: #53fc18;
   --x: #f1f1ef;
   --twitch: #8f50ff;
@@ -29,7 +31,8 @@ body {
 body {
   margin: 0;
   background:
-    radial-gradient(circle at 50% -20%, rgba(242, 198, 112, 0.2), transparent 34rem),
+    radial-gradient(circle at 18% -18%, rgba(123, 220, 255, 0.13), transparent 30rem),
+    radial-gradient(circle at 78% -10%, rgba(242, 198, 112, 0.14), transparent 30rem),
     linear-gradient(135deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 10px),
     var(--bg);
   color: var(--text);
@@ -50,11 +53,11 @@ button {
 .shell {
   width: min(1440px, calc(100vw - 32px));
   margin: 0 auto;
-  padding: 22px 0 32px;
+  padding: 16px 0 28px;
 }
 
 .topbar {
-  min-height: 76px;
+  min-height: 62px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -69,8 +72,8 @@ button {
 }
 
 .brandMark {
-  width: 48px;
-  height: 48px;
+  width: 42px;
+  height: 42px;
   display: grid;
   place-items: center;
   border: 1px solid var(--line-strong);
@@ -98,7 +101,7 @@ p {
 
 h1 {
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(34px, 6vw, 68px);
+  font-size: clamp(30px, 4.2vw, 52px);
   line-height: 0.95;
   color: var(--gold-bright);
   text-shadow: 0 0 22px rgba(242, 198, 112, 0.18);
@@ -232,7 +235,7 @@ h2 {
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 420px;
+  grid-template-columns: minmax(0, 1fr) 390px;
   gap: 18px;
   align-items: start;
 }
@@ -257,14 +260,14 @@ h2 {
 }
 
 .buildStrip {
-  min-height: 72px;
+  min-height: 58px;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
-  padding: 16px 20px;
+  padding: 12px 18px;
   color: var(--text);
-  font-size: clamp(14px, 2.1vw, 19px);
+  font-size: 15px;
 }
 
 .buildStrip strong {
@@ -274,7 +277,7 @@ h2 {
 
 .deskStats {
   display: grid;
-  grid-template-columns: repeat(3, 86px);
+  grid-template-columns: repeat(3, 78px);
   border-left: 1px solid rgba(242, 198, 112, 0.2);
 }
 
@@ -282,7 +285,7 @@ h2 {
   display: grid;
   align-content: center;
   justify-items: center;
-  min-height: 72px;
+  min-height: 58px;
   border-left: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -299,15 +302,15 @@ h2 {
 
 .deskStat strong {
   color: var(--gold-bright);
-  font-size: 24px;
+  font-size: 22px;
   line-height: 1.1;
 }
 
 .contextRail {
-  min-height: 46px;
+  min-height: 42px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   flex-wrap: wrap;
   gap: 12px;
   padding: 10px 18px;
@@ -320,7 +323,7 @@ h2 {
   align-items: center;
   flex-wrap: wrap;
   gap: 9px;
-  min-width: min(100%, 560px);
+  width: 100%;
 }
 
 .segmentButtons,
@@ -329,6 +332,10 @@ h2 {
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.contextChips[hidden] {
+  display: none;
 }
 
 .contextChips {
@@ -370,10 +377,10 @@ h2 {
 
 .feedToolbar {
   display: grid;
-  grid-template-columns: minmax(240px, auto) minmax(260px, auto) auto minmax(220px, 1fr);
-  align-items: end;
+  grid-template-columns: auto minmax(220px, 1fr) auto;
+  align-items: center;
   gap: 12px;
-  padding: 14px 18px;
+  padding: 10px 18px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -395,18 +402,22 @@ h2 {
   gap: 8px;
 }
 
+.sourceGroup {
+  min-width: 0;
+}
+
 .sourceToggle,
 .sourceBadge,
 .viewToggle,
 .toggleButton,
 .queueTab {
-  min-height: 42px;
+  min-height: 36px;
   display: inline-flex;
   align-items: center;
   gap: 10px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
-  padding: 0 14px;
+  padding: 0 11px;
   color: var(--text);
   background: rgba(255, 255, 255, 0.025);
 }
@@ -416,6 +427,57 @@ h2 {
 .toggleButton,
 .queueTab {
   opacity: 0.45;
+}
+
+.advancedFilters {
+  position: relative;
+}
+
+.advancedFilters > summary {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--muted);
+  padding: 0 12px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 900;
+  list-style: none;
+  text-transform: uppercase;
+}
+
+.advancedFilters > summary::-webkit-details-marker {
+  display: none;
+}
+
+.advancedFilters[open] > summary {
+  border-color: var(--line-strong);
+  color: var(--gold-bright);
+  background: rgba(242, 198, 112, 0.08);
+}
+
+.advancedFilterGrid {
+  position: absolute;
+  right: 0;
+  z-index: 12;
+  width: min(640px, calc(100vw - 40px));
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 14px;
+  margin-top: 8px;
+  border: 1px solid rgba(242, 198, 112, 0.24);
+  border-radius: 8px;
+  background: rgba(10, 9, 7, 0.98);
+  box-shadow: var(--shadow);
+  padding: 14px;
+}
+
+.dangerInline {
+  border-color: rgba(255, 109, 97, 0.28);
+  color: #ffb5ad;
 }
 
 .sourceToggle.active,
@@ -559,18 +621,18 @@ h2 {
 }
 
 .activeFilterBar {
-  min-height: 34px;
+  min-height: 30px;
   display: flex;
   align-items: center;
   padding: 0 18px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   color: var(--muted);
-  background: rgba(255, 255, 255, 0.018);
+  background: rgba(255, 255, 255, 0.012);
   font-size: 12px;
 }
 
 .decisionBar {
-  min-height: 48px;
+  min-height: 46px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -637,7 +699,7 @@ h2 {
 }
 
 .feed {
-  height: calc(100vh - 340px);
+  height: calc(100vh - 300px);
   min-height: 520px;
   overflow: auto;
   padding: 18px;
@@ -646,19 +708,19 @@ h2 {
 
 .messageRow {
   display: grid;
-  grid-template-columns: 158px minmax(120px, 220px) minmax(0, 1fr) 78px;
-  gap: 10px 16px;
+  grid-template-columns: 120px minmax(110px, 176px) minmax(0, 1fr) 70px;
+  gap: 8px 14px;
   align-items: center;
-  min-height: 74px;
-  margin-bottom: 10px;
-  padding: 12px 14px;
+  min-height: 68px;
+  margin-bottom: 8px;
+  padding: 11px 12px;
   border: 1px solid rgba(255, 255, 255, 0.09);
   background: rgba(0, 0, 0, 0.28);
 }
 
 .messageRow.priority-high {
-  border-color: rgba(242, 198, 112, 0.48);
-  background: linear-gradient(90deg, rgba(242, 198, 112, 0.1), rgba(0, 0, 0, 0.28) 42%);
+  border-color: rgba(123, 220, 255, 0.32);
+  background: linear-gradient(90deg, rgba(123, 220, 255, 0.07), rgba(0, 0, 0, 0.28) 44%);
 }
 
 .messageRow.priority-medium {
@@ -670,7 +732,7 @@ h2 {
 }
 
 .messageRow.decision-use {
-  box-shadow: inset 3px 0 0 rgba(83, 252, 24, 0.5);
+  box-shadow: inset 3px 0 0 rgba(83, 252, 24, 0.62);
 }
 
 .messageRow.decision-park {
@@ -707,7 +769,7 @@ h2 {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--gold-bright);
-  font-size: 18px;
+  font-size: 15px;
 }
 
 .messageChannel,
@@ -718,15 +780,15 @@ h2 {
 
 .intentPill {
   width: max-content;
-  display: inline-flex;
+  display: none;
   align-items: center;
-  min-height: 22px;
-  margin-top: 6px;
+  min-height: 20px;
+  margin-top: 5px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
   padding: 0 7px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
   text-transform: uppercase;
 }
@@ -735,20 +797,19 @@ h2 {
   width: max-content;
   display: none;
   align-items: center;
-  min-height: 22px;
-  margin-top: 6px;
+  min-height: 20px;
+  margin-top: 5px;
   margin-left: 6px;
   border: 1px solid rgba(242, 198, 112, 0.28);
   border-radius: 8px;
   padding: 0 7px;
   color: var(--gold-bright);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 900;
   text-transform: uppercase;
 }
 
-.priorityPill.high,
-.priorityPill.medium {
+.priorityPill.high {
   display: inline-flex;
 }
 
@@ -762,22 +823,22 @@ h2 {
   max-width: 100%;
   display: inline-flex;
   align-items: center;
-  min-height: 22px;
-  margin-top: 6px;
-  margin-left: 6px;
+  min-height: 20px;
+  margin-top: 5px;
+  margin-left: 5px;
   border: 1px solid rgba(242, 198, 112, 0.24);
   border-radius: 8px;
   padding: 0 7px;
   color: var(--gold-bright);
   background: rgba(242, 198, 112, 0.055);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 900;
   text-transform: uppercase;
 }
 
 .matchTerms {
   display: block;
-  margin-top: 5px;
+  margin-top: 4px;
   color: var(--gold);
   font-size: 11px;
   font-weight: 800;
@@ -867,11 +928,12 @@ h2 {
 .messageText {
   min-width: 0;
   overflow-wrap: anywhere;
-  font-size: 20px;
+  font-size: 17px;
   line-height: 1.35;
 }
 
 .messageCue {
+  display: none;
   margin-top: 6px;
   color: var(--muted);
   font-size: 12px;
@@ -891,13 +953,22 @@ h2 {
   align-items: center;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 6px;
+  gap: 5px;
+}
+
+.messageActions .messageAction:not(.primaryAction) {
+  display: none;
+}
+
+.messageRow:hover .messageActions .messageAction:not(.primaryAction),
+.messageRow:focus-within .messageActions .messageAction:not(.primaryAction) {
+  display: inline-flex;
 }
 
 .messageAction,
 .miniButton,
 .queueButton {
-  min-height: 30px;
+  min-height: 28px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.035);
@@ -920,6 +991,11 @@ h2 {
   color: var(--gold-bright);
 }
 
+.messageAction:not(.primaryAction) {
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.018);
+}
+
 .queuedAction {
   border-color: rgba(242, 198, 112, 0.34);
   background: rgba(242, 198, 112, 0.08);
@@ -928,19 +1004,19 @@ h2 {
 
 .sidePanel {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .panelBlock {
   border: 1px solid var(--line);
   background: var(--panel);
   box-shadow: var(--shadow);
-  padding: 16px;
+  padding: 14px;
 }
 
 .assistBlock {
   background:
-    linear-gradient(180deg, rgba(242, 198, 112, 0.1), rgba(14, 12, 9, 0.92)),
+    linear-gradient(180deg, rgba(123, 220, 255, 0.075), rgba(14, 12, 9, 0.92)),
     var(--panel);
 }
 
@@ -1319,15 +1395,34 @@ h2 {
 }
 
 .notesBlock summary,
-.demoBlock > summary {
+.demoBlock > summary,
+.sourcePanel > summary {
   min-height: 34px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   color: var(--gold-bright);
   cursor: pointer;
   font-size: 13px;
   font-weight: 900;
   text-transform: uppercase;
+}
+
+.sourcePanel {
+  padding: 12px 14px;
+}
+
+.sourcePanel > summary {
+  list-style: none;
+}
+
+.sourcePanel > summary::-webkit-details-marker {
+  display: none;
+}
+
+.sourcePanel[open] > summary {
+  margin-bottom: 10px;
 }
 
 .episodeBrief {
@@ -1605,6 +1700,16 @@ h2 {
     grid-template-columns: 1fr;
   }
 
+  .advancedFilters,
+  .advancedFilters > summary {
+    width: 100%;
+  }
+
+  .advancedFilterGrid {
+    position: static;
+    width: 100%;
+  }
+
   .deskStats {
     grid-template-columns: repeat(3, 1fr);
     border-top: 1px solid rgba(255, 255, 255, 0.08);
@@ -1665,12 +1770,16 @@ h2 {
     gap: 8px 12px;
   }
 
+  .messageMeta {
+    min-width: 0;
+  }
+
   .messageBody {
     grid-column: 1 / -1;
   }
 
   .messageText {
-    font-size: 18px;
+    font-size: 17px;
   }
 
   .messageTime,

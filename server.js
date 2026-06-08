@@ -39,8 +39,8 @@ const appConfig = {
   workspaceName: process.env.WORKSPACE_NAME || "Market Bubble Live Desk",
   eyebrow: process.env.WORKSPACE_EYEBROW || "Internal producer console",
   brandMark: process.env.WORKSPACE_MARK || "MB",
-  buildLabel: process.env.BUILD_LABEL || "Market Bubble desk:",
-  buildCopy: process.env.BUILD_COPY || "Twitch + X + Kick into one source-labeled live feed for the room.",
+  buildLabel: process.env.BUILD_LABEL || "Live desk",
+  buildCopy: process.env.BUILD_COPY || "Audience signals, routed for the room.",
   context: envList("WORKSPACE_CONTEXT").length
     ? envList("WORKSPACE_CONTEXT")
     : ["Banks + Ansem", "Prediction markets", "Crypto + AI", "Sports + culture", "Thursdays 1PM PST"],
