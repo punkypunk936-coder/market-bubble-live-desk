@@ -268,6 +268,34 @@ function renderSources() {
     .join("");
 }
 
+function renderEpisodeBrief() {
+  const node = $("episodeBrief");
+  if (!node) return;
+  const episode = state.config.latestEpisode || {};
+  if (!episode.title) {
+    node.innerHTML = `<div class="emptyState compact">No latest-show rehearsal configured.</div>`;
+    return;
+  }
+  const beats = (episode.segments || [])
+    .map((item) => `
+      <div class="episodeBeat">
+        <strong>${escapeHtml(item.segment || "Segment")}</strong>
+        <span>${escapeHtml(item.beat || "")}</span>
+      </div>
+    `)
+    .join("");
+  const terms = (episode.watchTerms || [])
+    .slice(0, 12)
+    .map((term) => `<span>${escapeHtml(term)}</span>`)
+    .join("");
+  node.innerHTML = `
+    <div class="episodeKicker">${escapeHtml(episode.airDate || "Latest show")}</div>
+    <p>${escapeHtml(episode.thesis || "")}</p>
+    <div class="episodeBeats">${beats}</div>
+    <div class="episodeTerms">${terms}</div>
+  `;
+}
+
 function renderConfig() {
   const config = state.config || {};
   const name = config.workspaceName || "Market Bubble Live Desk";
@@ -318,13 +346,15 @@ function renderConfig() {
   $("watchlist").innerHTML = (config.watchlist || [])
     .map((item) => `<span class="watchChip">${escapeHtml(item)}</span>`)
     .join("");
+  renderEpisodeBrief();
 }
 
 function segmentForTerm(term, sample) {
   const value = `${term || ""} ${sample?.text || ""}`.toLowerCase();
-  if (/\b(gta|culture|viral|creator|banks|stream|twitter|x)\b/.test(value)) return "Culture Shock";
-  if (/\b(nba|nfl|mlb|ufc|sports|spread|line|game|match)\b/.test(value)) return "Pick n' Roll";
-  if (/\b(ai|compute|eth|solana|sol|hyperliquid|hype|crypto|ethereum)\b/.test(value)) return "Future-Proof";
+  if (/\b(nba|nfl|mlb|ufc|sports|spread|line|game|match|baseball|bullpen)\b/.test(value)) return "Pick n' Roll";
+  if (/\b(60k|liquidation|liquidations|funding|open interest|oi|support|resistance|wick|breakdown|breakout|mispriced|probability|odds|polymarket|zcash|zec|bitcoin|btc)\b/.test(value)) return "The Price Is Wrong";
+  if (/\b(ai|agents|compute|near|eth|solana|sol|hyperliquid|hype|crypto|ethereum|frontier)\b/.test(value)) return "Future-Proof";
+  if (/\b(gta|culture|viral|creator|banks|stream|twitter|x|timeline|attention)\b/.test(value)) return "Culture Shock";
   return "The Price Is Wrong";
 }
 
@@ -797,6 +827,28 @@ function formatForClipboard(message) {
   return `[${message.sourceLabel || message.source}${message.channel ? ` #${message.channel}` : ""}] ${message.displayName || message.user}: ${message.text}`;
 }
 
+function formatEpisodeBrief() {
+  const episode = state.config.latestEpisode || {};
+  if (!episode.title) return "No latest-show rehearsal configured.";
+  const segments = (episode.segments || [])
+    .map((item, index) => `${index + 1}. ${item.segment}: ${item.beat}\n   Producer goal: ${item.producerGoal}`)
+    .join("\n");
+  return [
+    `Market Bubble latest-show rehearsal: ${episode.title}`,
+    `Air date: ${episode.airDate || "Latest Thursday show"}`,
+    `Source note: ${episode.sourceNote || "Public show context."}`,
+    "",
+    `Desk thesis: ${episode.thesis || "Use the desk to route live audience flow into the right segment."}`,
+    "",
+    "Segment beats",
+    segments || "No segment beats configured.",
+    "",
+    `Watch terms: ${(episode.watchTerms || []).join(", ") || "None configured."}`,
+    "",
+    "Operator flow: Run Rehearsal, watch Signal Radar, queue the best ask/signal/clip, then Copy Rundown for host handoff.",
+  ].join("\n");
+}
+
 function formatQueueItem(item) {
   const segment = segmentForMessage(item);
   const topicSegment = topicSegmentForMessage(item);
@@ -925,6 +977,48 @@ function bindControls() {
     $("copySegmentBriefBtn").textContent = "Copied";
     setTimeout(() => {
       $("copySegmentBriefBtn").textContent = "Copy Segment Brief";
+    }, 900);
+  });
+
+  $("runRehearsalBtn").addEventListener("click", async () => {
+    const button = $("runRehearsalBtn");
+    button.disabled = true;
+    button.textContent = "Running";
+    state.autoScroll = true;
+    state.segmentLens = false;
+    state.intentFilter = "all";
+    state.focusTerm = "";
+    state.query = "";
+    state.filters = new Set(["kick", "x", "twitch"]);
+    $("searchInput").value = "";
+    $("autoScrollBtn").classList.add("active");
+    $("segmentLensBtn").classList.remove("active");
+    document.querySelectorAll(".sourceToggle").forEach((item) => {
+      item.classList.add("active");
+    });
+    document.querySelectorAll(".viewToggle").forEach((item) => {
+      item.classList.toggle("active", item.dataset.intent === "all");
+    });
+    renderRadar();
+    renderFeed();
+    updateMetrics();
+    try {
+      await postJson("/api/rehearsal/latest-show");
+      button.textContent = "Live";
+    } catch (error) {
+      button.textContent = "Failed";
+    }
+    setTimeout(() => {
+      button.disabled = false;
+      button.textContent = "Run Rehearsal";
+    }, 1600);
+  });
+
+  $("copyEpisodeBriefBtn").addEventListener("click", async () => {
+    await copyText(formatEpisodeBrief());
+    $("copyEpisodeBriefBtn").textContent = "Copied";
+    setTimeout(() => {
+      $("copyEpisodeBriefBtn").textContent = "Copy Episode Brief";
     }, 900);
   });
 

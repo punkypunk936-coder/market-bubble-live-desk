@@ -1166,6 +1166,77 @@ h2 {
   text-transform: uppercase;
 }
 
+.episodeBrief {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.episodeKicker {
+  color: var(--gold);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.episodeBrief p {
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.episodeBeats {
+  display: grid;
+  gap: 8px;
+}
+
+.episodeBeat {
+  border-left: 2px solid rgba(242, 198, 112, 0.44);
+  padding-left: 10px;
+}
+
+.episodeBeat strong {
+  display: block;
+  color: var(--gold-bright);
+  font-size: 12px;
+}
+
+.episodeBeat span {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.episodeTerms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.episodeTerms span {
+  border: 1px solid rgba(242, 198, 112, 0.2);
+  border-radius: 8px;
+  padding: 3px 7px;
+  color: var(--gold-bright);
+  background: rgba(242, 198, 112, 0.045);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.episodeActions {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.episodeActions .primaryButton,
+.episodeActions .miniButton {
+  width: 100%;
+}
+
 .queueMeta,
 .segmentItem span {
   display: block;
@@ -1399,6 +1470,10 @@ h2 {
   }
 
   .assistActions {
+    grid-template-columns: 1fr;
+  }
+
+  .episodeActions {
     grid-template-columns: 1fr;
   }
 

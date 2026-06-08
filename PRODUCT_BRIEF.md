@@ -44,6 +44,7 @@ It:
 - shows which topics are heating up in Signal Radar
 - lets the producer queue items for the hosts
 - creates copyable focus briefs and segment-grouped rundowns
+- lets the team run a latest-show rehearsal so operators can see how the desk handles a real Market Bubble flow before going live
 - keeps the queue saved if the server restarts
 - shows whether each source is live or stale
 
@@ -73,12 +74,13 @@ Before or during the show:
 1. Open the Live Desk.
 2. Watch the combined feed.
 3. Set Segment Mode to the current show block.
-4. Use High Signal when chat gets noisy.
-5. Use Signal Radar to see which watchlist topics are heating up for that segment.
-6. Click Queue, Ask, Signal, or Clip on important messages.
-7. Copy a Focus Brief when a topic deserves on-air attention.
-8. Copy the Rundown when the hosts need the current segment queue.
-9. Mark items Done once they have been used.
+4. Run the latest-show rehearsal before a demo, dry run, or live production handoff.
+5. Use High Signal when chat gets noisy.
+6. Use Signal Radar to see which watchlist topics are heating up for that segment.
+7. Click Queue, Ask, Signal, or Clip on important messages.
+8. Copy a Focus Brief when a topic deserves on-air attention.
+9. Copy the Rundown when the hosts need the current segment queue.
+10. Mark items Done once they have been used.
 
 The producer does not need to explain the whole feed to the hosts. They can hand over clean, source-labeled moments.
 
@@ -97,7 +99,7 @@ That difference matters.
 The product is contextual. It understands:
 
 - Market Bubble segments
-- watchlist terms like Polymarket, Bullpen, HYPE, HyperLiquid, GTA 6, and AI compute
+- latest-show beats like BTC 60K, liquidations, Bullpen, Zcash, NEAR, AI agents, and Polymarket
 - source labels
 - high-signal audience questions
 - clip-worthy moments

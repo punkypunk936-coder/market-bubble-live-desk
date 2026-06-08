@@ -18,6 +18,7 @@ For a plain-English business pitch, see [PRODUCT_BRIEF.md](PRODUCT_BRIEF.md).
 - Adds `Producer Assist` with a next best move, segment heat, current queue pressure, and a copyable segment brief.
 - Adds a `Signal Radar` that ranks active watchlist topics by recent heat, source mix, and high-signal count.
 - Generates a copyable focus brief with current-segment timing, source mix, sample message, and a suggested on-air move.
+- Adds a `Latest Show Rehearsal` mode that replays a practical control-room flow from the most recent Thursday show context.
 - Lets producers queue items as on-air questions, market signals, or clip candidates.
 - Stamps queued items with the active segment, preserves the message's natural topic segment, lets operators promote or park items, and sorts the active segment to the top.
 - Persists recent feed history and the operator queue to `data/operator-state.json` so a restart does not wipe the live rundown.
@@ -55,15 +56,16 @@ Replace the Twitch/Kick channel names with the actual live channel slugs if they
 1. Keep the main feed open during the live show.
 2. Use source toggles and search to narrow the room.
 3. Set `Segment Mode` to the current show block so the radar and queue are biased toward the right context.
-4. Start from `Producer Assist`: use the next move, `Triage Mode`, or `Copy Segment Brief` when the hosts need a clean handoff.
-5. Toggle `Segment Lens` when the producer only wants messages relevant to the current block.
-6. Use the `View` controls to isolate questions, market signals, clip candidates, or culture chatter.
-7. Use `High Signal` when the room gets loud; it prioritizes watchlist hits and show-relevant questions.
-8. Use `Signal Radar` to see which watchlist topics are heating up across sources. Click a radar item to focus the feed.
-9. Click `Copy Focus Brief` to hand a concise on-air prompt to the hosts or producer chat.
-10. Click `Queue` for the app's best guess, or use `Ask`, `Signal`, and `Clip` to route a message manually.
-11. Work the Operator Queue: `Use Now` promotes a parked item into the current segment, `Park Topic` moves an off-block item back to its natural topic segment, `Done` closes an item, and `Copy Rundown` copies the open queue grouped by segment.
-12. Use `Auto-scroll` when actively watching live flow, and turn it off when reviewing older messages. `Dense` compresses the feed for high-volume moments.
+4. Before a demo or pre-show warmup, open `Latest show rehearsal` and click `Run Rehearsal` to watch the desk handle the last Thursday show flow.
+5. Start from `Producer Assist`: use the next move, `Triage Mode`, or `Copy Segment Brief` when the hosts need a clean handoff.
+6. Toggle `Segment Lens` when the producer only wants messages relevant to the current block.
+7. Use the `View` controls to isolate questions, market signals, clip candidates, or culture chatter.
+8. Use `High Signal` when the room gets loud; it prioritizes watchlist hits and show-relevant questions.
+9. Use `Signal Radar` to see which watchlist topics are heating up across sources. Click a radar item to focus the feed.
+10. Click `Copy Focus Brief` to hand a concise on-air prompt to the hosts or producer chat.
+11. Click `Queue` for the app's best guess, or use `Ask`, `Signal`, and `Clip` to route a message manually.
+12. Work the Operator Queue: `Use Now` promotes a parked item into the current segment, `Park Topic` moves an off-block item back to its natural topic segment, `Done` closes an item, and `Copy Rundown` copies the open queue grouped by segment.
+13. Use `Auto-scroll` when actively watching live flow, and turn it off when reviewing older messages. `Dense` compresses the feed for high-volume moments.
 
 ## Deployment
 

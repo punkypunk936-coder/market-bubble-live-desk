@@ -42,6 +42,35 @@ const appConfig = {
   context: envList("WORKSPACE_CONTEXT").length
     ? envList("WORKSPACE_CONTEXT")
     : ["Banks + Ansem", "Prediction markets", "Crypto + AI", "Sports + culture", "Thursdays 1PM PST"],
+  latestEpisode: {
+    title: "Latest Thursday Show Rehearsal",
+    airDate: "June 4, 2026",
+    sourceNote: "Built from public Market Bubble clips and crypto market recaps published after the latest Thursday show.",
+    thesis: "Operate the BTC 60K liquidation conversation first, then route Bullpen, Zcash, NEAR, AI agents, and Polymarket reactions into the right live segment.",
+    segments: [
+      {
+        segment: "The Price Is Wrong",
+        beat: "BTC 60K support, funding, and long-liquidation risk",
+        producerGoal: "Queue one clean BTC question, one market-structure signal, and one clip-worthy host prompt.",
+      },
+      {
+        segment: "Pick n' Roll",
+        beat: "Bullpen competition and sports-market movement",
+        producerGoal: "Catch odds movement and anything that should become a recurring leaderboard beat.",
+      },
+      {
+        segment: "The Price Is Wrong",
+        beat: "Zcash privacy thesis after a violent repricing",
+        producerGoal: "Separate real privacy demand from CT hype and route a concise mispricing question.",
+      },
+      {
+        segment: "Future-Proof",
+        beat: "NEAR, AI agents, and private machine-to-machine money rails",
+        producerGoal: "Ask what is investable now versus what is just a long-term infra narrative.",
+      },
+    ],
+    watchTerms: ["BTC 60K", "liquidations", "Bitcoin", "funding", "open interest", "Bullpen Competition", "Zcash", "ZEC", "NEAR", "AI agents", "Polymarket"],
+  },
   segments: [
     {
       name: "Future-Proof",
@@ -62,7 +91,7 @@ const appConfig = {
   ],
   watchlist: envList("WORKSPACE_WATCHLIST").length
     ? envList("WORKSPACE_WATCHLIST")
-    : ["Polymarket", "Bullpen", "HYPE", "HyperLiquid", "Ethereum", "Solana", "GTA 6", "AI compute"],
+    : ["Polymarket", "Bullpen", "Bullpen Competition", "BTC 60K", "liquidations", "Bitcoin", "funding", "open interest", "Zcash", "ZEC", "NEAR", "AI agents", "HYPE", "HyperLiquid", "Ethereum", "Solana", "GTA 6", "AI compute"],
 };
 
 function configuredSegmentNames() {
@@ -78,9 +107,10 @@ function normalizeSegmentName(value, fallback = appConfig.segments[0]?.name || "
 function segmentForText(text, terms = []) {
   const normalizedTerms = Array.isArray(terms) ? terms : [terms].filter(Boolean);
   const value = `${text || ""} ${normalizedTerms.join(" ")}`.toLowerCase();
-  if (/\b(gta|culture|viral|creator|banks|stream|twitter|x|timeline|attention)\b/.test(value)) return "Culture Shock";
   if (/\b(nba|nfl|mlb|ufc|sports|spread|line|game|match|baseball|bullpen)\b/.test(value)) return "Pick n' Roll";
-  if (/\b(ai|compute|eth|ethereum|solana|sol|hyperliquid|hype|crypto|btc|frontier)\b/.test(value)) return "Future-Proof";
+  if (/\b(60k|liquidation|liquidations|funding|open interest|oi|support|resistance|wick|breakdown|breakout|mispriced|probability|odds|polymarket|zcash|zec|bitcoin|btc)\b/.test(value)) return "The Price Is Wrong";
+  if (/\b(ai|agents|compute|near|eth|ethereum|solana|sol|hyperliquid|hype|crypto|frontier)\b/.test(value)) return "Future-Proof";
+  if (/\b(gta|culture|viral|creator|banks|stream|twitter|x|timeline|attention)\b/.test(value)) return "Culture Shock";
   return "The Price Is Wrong";
 }
 
@@ -228,7 +258,7 @@ function publishStatus(source, status, detail, extra = {}) {
 function classifyMessage(text) {
   const value = String(text || "").toLowerCase();
   if (/[?？]/.test(value) || /\b(ask|question|why|how|what|wen|when|can you|thoughts)\b/.test(value)) return "question";
-  if (/\b(poly|polymarket|bullpen|odds|market|spread|line|mispriced|arb|probability|price|short|long|ticker|hype|eth|btc|sol|hyperliquid)\b/.test(value)) return "market";
+  if (/\b(poly|polymarket|bullpen|odds|market|spread|line|mispriced|arb|probability|price|short|long|ticker|hype|eth|btc|bitcoin|sol|hyperliquid|zec|zcash|funding|open interest|liquidation|liquidations|60k|near)\b/.test(value)) return "market";
   if (/\b(clip|clipping|viral|quote|timestamp|cook|cooking|fire|insane)\b/.test(value)) return "clip";
   if (/\b(gta|mizkif|banks|ansem|culture|stream|ct|twitter|x)\b/.test(value)) return "culture";
   return "chat";
@@ -251,7 +281,7 @@ function scoreMessage({ source, text, intent }) {
   if (intent === "culture") score += 1;
   if (source === "x") score += 1;
   score += Math.min(matchedTerms.length * 2, 6);
-  if (/\b(banks|ansem|polymarket|bullpen)\b/i.test(text || "")) score += 2;
+  if (/\b(banks|ansem|polymarket|bullpen|bitcoin|btc|60k|zcash|zec|near|liquidation|liquidations)\b/i.test(text || "")) score += 2;
   const priority = score >= 6 ? "high" : score >= 3 ? "medium" : "normal";
   return { score, priority, matchedTerms, segment };
 }
@@ -261,7 +291,7 @@ function pushMessage(input) {
   const source = input.source || "system";
   const id = input.id || hashId([source, input.channel, input.user, input.text, input.createdAt || receivedAt]);
   const dedupeKey = `${source}:${id}`;
-  if (state.seen.has(dedupeKey)) return;
+  if (state.seen.has(dedupeKey)) return null;
   state.seen.set(dedupeKey, Date.now());
   compactSeen();
 
@@ -295,6 +325,38 @@ function pushMessage(input) {
   broadcast("message", message);
   broadcast("metrics", metrics());
   schedulePersist();
+  return message;
+}
+
+function queueProducerItem(message, kind, segmentOverride) {
+  const safeKind = ["question", "signal", "clip"].includes(kind) ? kind : "signal";
+  const topicSegment = normalizeSegmentName(message.topicSegment || message.segment || segmentForText(message.text, message.matchedTerms || []));
+  const segment = normalizeSegmentName(segmentOverride || state.showState.currentSegment || topicSegment, topicSegment);
+  const queueId = hashId(["queue", safeKind, message.id]);
+  const existingIndex = state.producerQueue.findIndex((item) => item.id === queueId);
+  const queueItem = {
+    id: queueId,
+    kind: safeKind,
+    messageId: message.id,
+    source: message.source,
+    sourceLabel: message.sourceLabel,
+    channel: message.channel,
+    displayName: message.displayName,
+    text: message.text,
+    createdAt: message.createdAt,
+    intent: message.intent,
+    priority: message.priority,
+    matchedTerms: message.matchedTerms || [],
+    signalScore: message.signalScore || 0,
+    segment,
+    topicSegment,
+    queuedAt: new Date().toISOString(),
+    done: false,
+  };
+  if (existingIndex >= 0) state.producerQueue.splice(existingIndex, 1);
+  state.producerQueue.unshift(queueItem);
+  if (state.producerQueue.length > 80) state.producerQueue.splice(80);
+  return queueItem;
 }
 
 function metrics() {
@@ -319,6 +381,162 @@ function publicState() {
     producerQueue: state.producerQueue,
     metrics: metrics(),
   };
+}
+
+const latestShowRehearsalMessages = [
+  {
+    source: "x",
+    channel: "MarketBubble clip",
+    user: "MarketBubble",
+    displayName: "Market Bubble",
+    text: "Latest show clip: Ansem's BTC 60K call turned into the room's liquidation question.",
+    segment: "The Price Is Wrong",
+    queueKind: "signal",
+    switchSegment: "The Price Is Wrong",
+  },
+  {
+    source: "kick",
+    channel: "market-bubble",
+    user: "riskdesk",
+    text: "Ask Ansem what invalidates the BTC 60K breakdown if funding cools off before the next wick.",
+    segment: "The Price Is Wrong",
+    queueKind: "question",
+  },
+  {
+    source: "twitch",
+    channel: "live-show",
+    user: "chartwatcher",
+    text: "Polymarket should have a Bitcoin below 60K retest market after those liquidations.",
+    segment: "The Price Is Wrong",
+  },
+  {
+    source: "x",
+    channel: "crypto tape",
+    user: "liq_map",
+    text: "Open interest is still sticky after the BTC 60K move; feels like forced sellers can drive the next leg.",
+    segment: "The Price Is Wrong",
+    queueKind: "signal",
+  },
+  {
+    source: "kick",
+    channel: "market-bubble",
+    user: "clipstack",
+    text: "Clip candidate: don't chase the wick, trade the forced seller.",
+    segment: "The Price Is Wrong",
+    queueKind: "clip",
+  },
+  {
+    source: "x",
+    channel: "Bullpen Competition",
+    user: "line_mover",
+    text: "Bullpen Competition angle: which baseball markets moved before the room caught them?",
+    segment: "Pick n' Roll",
+    queueKind: "question",
+    switchSegment: "Pick n' Roll",
+  },
+  {
+    source: "twitch",
+    channel: "live-show",
+    user: "parlaydesk",
+    text: "Banks should turn Bullpen into a weekly leaderboard segment, not just a one-off competition.",
+    segment: "Pick n' Roll",
+    queueKind: "signal",
+  },
+  {
+    source: "kick",
+    channel: "market-bubble",
+    user: "oddsreader",
+    text: "Pick n' Roll needs the actual line, entry price, and why the room thinks it is mispriced.",
+    segment: "Pick n' Roll",
+  },
+  {
+    source: "x",
+    channel: "privacy tape",
+    user: "shieldedflow",
+    text: "Zcash and ZEC are the clean Price Is Wrong debate: privacy demand versus CT momentum.",
+    segment: "The Price Is Wrong",
+    queueKind: "signal",
+    switchSegment: "The Price Is Wrong",
+  },
+  {
+    source: "twitch",
+    channel: "live-show",
+    user: "privacymax",
+    text: "Ask if Zcash is actually mispriced after the bug/liquidity reset or if the thesis got weaker.",
+    segment: "The Price Is Wrong",
+    queueKind: "question",
+  },
+  {
+    source: "kick",
+    channel: "market-bubble",
+    user: "probabilitynerd",
+    text: "Polymarket angle: what odds would make a ZEC recovery trade worth discussing on air?",
+    segment: "The Price Is Wrong",
+  },
+  {
+    source: "x",
+    channel: "AI agents",
+    user: "agentrails",
+    text: "NEAR plus AI agents is Future-Proof if private machine payments become an actual rail.",
+    segment: "Future-Proof",
+    queueKind: "signal",
+    switchSegment: "Future-Proof",
+  },
+  {
+    source: "kick",
+    channel: "market-bubble",
+    user: "infraonly",
+    text: "Ask what is investable in NEAR and AI agents right now versus what is just the 2030 pitch.",
+    segment: "Future-Proof",
+    queueKind: "question",
+  },
+  {
+    source: "twitch",
+    channel: "live-show",
+    user: "deskproducer",
+    text: "Rundown should end with BTC 60K, Bullpen Competition, Zcash, then NEAR AI agents.",
+    segment: "Future-Proof",
+    queueKind: "clip",
+  },
+];
+
+let latestRehearsalRun = 0;
+
+function updateCurrentSegment(currentSegment) {
+  const normalized = normalizeSegmentName(currentSegment, state.showState.currentSegment);
+  state.showState = {
+    currentSegment: normalized,
+    updatedAt: new Date().toISOString(),
+  };
+  broadcast("show-state", publicState());
+  schedulePersist();
+}
+
+async function runLatestShowRehearsal() {
+  const runId = ++latestRehearsalRun;
+  const queued = [];
+  for (const [index, item] of latestShowRehearsalMessages.entries()) {
+    if (index > 0) await wait(Number(process.env.REHEARSAL_INTERVAL_MS || 650));
+    if (runId !== latestRehearsalRun) return { count: index, queued };
+    if (item.switchSegment) updateCurrentSegment(item.switchSegment);
+    const message = pushMessage({
+      ...item,
+      id: hashId(["latest-show-rehearsal", runId, index, item.source, Date.now()]),
+      displayName: item.displayName || item.user,
+      createdAt: new Date().toISOString(),
+      meta: {
+        rehearsal: "latest-show",
+        airDate: appConfig.latestEpisode.airDate,
+      },
+    });
+    if (message && item.queueKind) {
+      const queueItem = queueProducerItem(message, item.queueKind, item.segment);
+      queued.push(queueItem.id);
+      broadcast("queue", { producerQueue: state.producerQueue, metrics: metrics() });
+      schedulePersist();
+    }
+  }
+  return { count: latestShowRehearsalMessages.length, queued };
 }
 
 function jsonResponse(res, status, payload) {
@@ -393,6 +611,17 @@ async function handleApi(req, res, pathname) {
     jsonResponse(res, 200, { ok: true, history: state.history, ...publicState() });
     return;
   }
+  if (req.method === "POST" && pathname === "/api/rehearsal/latest-show") {
+    runLatestShowRehearsal().catch((error) => {
+      console.error("Latest show rehearsal failed:", error);
+    });
+    jsonResponse(res, 202, {
+      ok: true,
+      episode: appConfig.latestEpisode,
+      count: latestShowRehearsalMessages.length,
+    });
+    return;
+  }
   if (req.method === "POST" && pathname === "/api/clear") {
     state.history = [];
     state.seen.clear();
@@ -424,33 +653,7 @@ async function handleApi(req, res, pathname) {
       jsonResponse(res, 404, { ok: false, error: "Message not found." });
       return;
     }
-    const kind = ["question", "signal", "clip"].includes(body.kind) ? body.kind : "signal";
-    const topicSegment = normalizeSegmentName(message.topicSegment || message.segment || segmentForText(message.text, message.matchedTerms || []));
-    const segment = normalizeSegmentName(body.segment || state.showState.currentSegment || topicSegment, topicSegment);
-    const queueId = hashId(["queue", kind, message.id]);
-    const existingIndex = state.producerQueue.findIndex((item) => item.id === queueId);
-    const queueItem = {
-      id: queueId,
-      kind,
-      messageId: message.id,
-      source: message.source,
-      sourceLabel: message.sourceLabel,
-      channel: message.channel,
-      displayName: message.displayName,
-      text: message.text,
-      createdAt: message.createdAt,
-      intent: message.intent,
-      priority: message.priority,
-      matchedTerms: message.matchedTerms || [],
-      signalScore: message.signalScore || 0,
-      segment,
-      topicSegment,
-      queuedAt: new Date().toISOString(),
-      done: false,
-    };
-    if (existingIndex >= 0) state.producerQueue.splice(existingIndex, 1);
-    state.producerQueue.unshift(queueItem);
-    if (state.producerQueue.length > 80) state.producerQueue.splice(80);
+    const queueItem = queueProducerItem(message, body.kind, body.segment);
     broadcast("queue", { producerQueue: state.producerQueue, metrics: metrics() });
     jsonResponse(res, 200, { ok: true, item: queueItem });
     schedulePersist();
