@@ -651,7 +651,7 @@ function renderConfig() {
   document.title = name;
   $("workspaceName").textContent = name;
   $("workspaceEyebrow").textContent = config.eyebrow || "Internal producer console";
-  $("brandMark").textContent = config.brandMark || "MB";
+  $("brandMark").setAttribute("aria-label", `${name} logo`);
   $("buildLabel").textContent = config.buildLabel || "Market Bubble desk:";
   $("buildCopy").textContent = config.buildCopy || "Twitch + X + Kick into one source-labeled live feed for the room.";
 
