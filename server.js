@@ -64,6 +64,29 @@ const appConfig = {
   brandMark: process.env.WORKSPACE_MARK || "MB",
   buildLabel: process.env.BUILD_LABEL || "Live desk",
   buildCopy: process.env.BUILD_COPY || "Audience signals, routed for the room.",
+  strategicPillars: [
+    {
+      id: "make-money",
+      label: "Make Money",
+      short: "Trades, odds, mispricings",
+      detail: "Anything that helps the room find, challenge, size, or explain a trade.",
+      keywords: ["money", "trade", "trades", "profit", "pnl", "position", "size", "sizing", "odds", "mispriced", "polymarket", "prediction", "btc", "bitcoin", "eth", "sol", "hype", "hyperliquid", "liquidation", "funding", "support", "resistance", "long", "short", "ticker", "stock", "equity", "sportsbook", "spread", "line"],
+    },
+    {
+      id: "leverage-ai",
+      label: "Leverage AI",
+      short: "Agents, compute, automation",
+      detail: "Anything that helps the show explain or use AI as a market and operating edge.",
+      keywords: ["ai", "agent", "agents", "automation", "automate", "compute", "model", "models", "frontier", "openai", "anthropic", "venice", "nuclear", "infra", "infrastructure", "gpu", "data center", "data centres"],
+    },
+    {
+      id: "command-attention",
+      label: "Command Attention",
+      short: "Clips, culture, social heat",
+      detail: "Anything that can travel on X, TikTok, Shorts, or the timeline.",
+      keywords: ["attention", "clip", "clips", "viral", "culture", "creator", "stream", "timeline", "x", "twitter", "tiktok", "shorts", "youtube", "guest", "faze", "banks", "ansem", "quote", "moment", "meme"],
+    },
+  ],
   context: envList("WORKSPACE_CONTEXT").length
     ? envList("WORKSPACE_CONTEXT")
     : ["Banks + Ansem", "Prediction markets", "Crypto + AI", "Sports + culture", "Thursdays 1PM PST"],

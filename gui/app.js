@@ -5,6 +5,7 @@ const state = {
   filters: new Set(["kick", "x", "twitch"]),
   intentFilter: "all",
   decisionFilter: "all",
+  pillarFilter: "all",
   queueFilter: "open",
   query: "",
   autoScroll: true,
@@ -28,6 +29,30 @@ const sourceNames = {
   twitch: "Twitch",
   system: "System",
 };
+
+const fallbackStrategicPillars = [
+  {
+    id: "make-money",
+    label: "Make Money",
+    short: "Trades, odds, mispricings",
+    detail: "Find, challenge, size, or explain a trade.",
+    keywords: ["money", "trade", "trades", "profit", "pnl", "position", "size", "sizing", "odds", "mispriced", "polymarket", "prediction", "btc", "bitcoin", "eth", "sol", "hype", "hyperliquid", "liquidation", "funding", "support", "resistance", "long", "short", "ticker", "stock", "equity", "sportsbook", "spread", "line"],
+  },
+  {
+    id: "leverage-ai",
+    label: "Leverage AI",
+    short: "Agents, compute, automation",
+    detail: "Use AI as a market and operating edge.",
+    keywords: ["ai", "agent", "agents", "automation", "automate", "compute", "model", "models", "frontier", "openai", "anthropic", "venice", "nuclear", "infra", "infrastructure", "gpu", "data center", "data centres"],
+  },
+  {
+    id: "command-attention",
+    label: "Command Attention",
+    short: "Clips, culture, social heat",
+    detail: "Find moments that travel on X, TikTok, Shorts, or the timeline.",
+    keywords: ["attention", "clip", "clips", "viral", "culture", "creator", "stream", "timeline", "x", "twitter", "tiktok", "shorts", "youtube", "guest", "faze", "banks", "ansem", "quote", "moment", "meme"],
+  },
+];
 
 function $(id) {
   return document.getElementById(id);
@@ -152,6 +177,97 @@ function currentSegmentName() {
   return normalizeSegment(state.showState?.currentSegment, names[0] || "");
 }
 
+function strategicPillars() {
+  const configured = Array.isArray(state.config.strategicPillars) ? state.config.strategicPillars : [];
+  const valid = configured
+    .map((pillar) => ({
+      id: String(pillar.id || "").trim(),
+      label: String(pillar.label || "").trim(),
+      short: String(pillar.short || "").trim(),
+      detail: String(pillar.detail || "").trim(),
+      keywords: Array.isArray(pillar.keywords) ? pillar.keywords.map((item) => String(item || "").trim()).filter(Boolean) : [],
+    }))
+    .filter((pillar) => pillar.id && pillar.label);
+  return valid.length ? valid : fallbackStrategicPillars;
+}
+
+function pillarById(id) {
+  return strategicPillars().find((pillar) => pillar.id === id) || null;
+}
+
+function normalizePillarId(value) {
+  const requested = String(value || "").trim().toLowerCase();
+  return strategicPillars().find((pillar) => pillar.id === requested || pillar.label.toLowerCase() === requested)?.id || "";
+}
+
+function keywordScore(value, keywords = []) {
+  const text = String(value || "").toLowerCase();
+  return keywords.reduce((score, keyword) => {
+    const term = String(keyword || "").toLowerCase();
+    if (!term) return score;
+    return score + (text.includes(term) ? 1 : 0);
+  }, 0);
+}
+
+function pillarForMessage(message) {
+  const pillars = strategicPillars();
+  const requested = normalizePillarId(message?.pillar || message?.operator?.pillar);
+  if (requested) return pillarById(requested);
+
+  const segment = segmentForMessage(message);
+  const kind = smartKindForMessage(message);
+  const value = [
+    message?.text,
+    message?.intent,
+    message?.channel,
+    message?.sourceLabel,
+    segment,
+    topicSegmentForMessage(message),
+    ...(message?.matchedTerms || []),
+  ].filter(Boolean).join(" ");
+  const scores = pillars.map((pillar) => ({ pillar, score: keywordScore(value, pillar.keywords) }));
+  const add = (id, amount) => {
+    const item = scores.find((row) => row.pillar.id === id);
+    if (item) item.score += amount;
+  };
+
+  if (message?.intent === "market" || kind === "signal") add("make-money", 3);
+  if (segment === "The Price Is Wrong" || segment === "Pick n' Roll") add("make-money", 2);
+  if (segment === "Future-Proof") add("leverage-ai", 2);
+  if (message?.intent === "clip" || message?.intent === "culture" || kind === "clip") add("command-attention", 3);
+  if (segment === "Culture Shock") add("command-attention", 2);
+
+  scores.sort((a, b) => b.score - a.score);
+  if (scores[0]?.score > 0) return scores[0].pillar;
+  if (segment === "Future-Proof") return pillarById("leverage-ai") || pillars[0];
+  if (segment === "Culture Shock") return pillarById("command-attention") || pillars[0];
+  return pillarById("make-money") || pillars[0];
+}
+
+function pillarCueForMessage(message, pillar = pillarForMessage(message)) {
+  return {
+    "make-money": "Money angle",
+    "leverage-ai": "AI leverage",
+    "command-attention": "Attention play",
+  }[pillar?.id] || pillar?.label || "Strategic pillar";
+}
+
+function pillarCounts(messages) {
+  const counts = Object.fromEntries(strategicPillars().map((pillar) => [pillar.id, 0]));
+  for (const message of messages) {
+    const pillar = pillarForMessage(message);
+    counts[pillar.id] = (counts[pillar.id] || 0) + 1;
+  }
+  return counts;
+}
+
+function dominantPillarForMessages(messages) {
+  const pillars = strategicPillars();
+  if (!messages.length) return pillars[0];
+  const counts = pillarCounts(messages);
+  return [...pillars].sort((a, b) => (counts[b.id] || 0) - (counts[a.id] || 0))[0] || pillars[0];
+}
+
 function queueTimeMs(item) {
   const value = new Date(item.queuedAt || item.createdAt || 0).getTime();
   return Number.isFinite(value) ? value : 0;
@@ -200,19 +316,21 @@ function decisionForMessage(message) {
   return { status: "noise", label: "Rest", reason: message?.operator?.reason || "Low actionability", kind: message?.operator?.kind || smartKindForMessage(message) };
 }
 
-function passesBaseFilters(message) {
+function passesBaseFilters(message, options = {}) {
   if (!state.filters.has(message.source)) return false;
   if (state.intentFilter === "high") {
     if (message.priority !== "high") return false;
   } else if (state.intentFilter !== "all" && message.intent !== state.intentFilter) {
     return false;
   }
+  if (!options.ignorePillar && state.pillarFilter !== "all" && pillarForMessage(message).id !== state.pillarFilter) return false;
   const query = state.query.trim().toLowerCase();
   const focus = state.focusTerm.trim().toLowerCase();
   if (focus && !messageMatchesTerm(message, focus)) return false;
   if (state.segmentLens && segmentForMessage(message) !== currentSegmentName()) return false;
   if (!query) return true;
-  return [message.text, message.displayName, message.user, message.channel, message.sourceLabel, message.intent, ...(message.matchedTerms || [])]
+  const pillar = pillarForMessage(message);
+  return [message.text, message.displayName, message.user, message.channel, message.sourceLabel, message.intent, pillar.label, pillar.short, ...(message.matchedTerms || [])]
     .filter(Boolean)
     .some((part) => String(part).toLowerCase().includes(query));
 }
@@ -311,6 +429,7 @@ function renderMessage(message, flash = false) {
   const priority = template.querySelector(".priorityPill");
   const mode = template.querySelector(".modePill");
   const segment = template.querySelector(".segmentPill");
+  const pillarPill = template.querySelector(".pillarPill");
   const matchTerms = template.querySelector(".matchTerms");
   const decisionBadge = template.querySelector(".decisionBadge");
   const decisionReason = template.querySelector(".decisionReason");
@@ -326,6 +445,8 @@ function renderMessage(message, flash = false) {
   if (decision.status === "use") row.classList.add("use-now");
   row.dataset.decision = decision.status;
   row.dataset.messageId = message.id;
+  const pillar = pillarForMessage(message);
+  row.dataset.pillar = pillar.id;
   const queuedKinds = queuedKindsForMessage(message.id);
   if (queuedKinds.size) row.classList.add("queued");
   if (flash) row.classList.add("flash");
@@ -350,6 +471,9 @@ function renderMessage(message, flash = false) {
     mode.classList.add("live");
   }
   segment.textContent = segmentForMessage(message);
+  pillarPill.textContent = pillar.label;
+  pillarPill.title = pillar.detail || pillar.short || pillar.label;
+  pillarPill.classList.add(pillar.id);
   matchTerms.textContent = (message.matchedTerms || []).join(", ");
   decisionBadge.textContent = decision.label;
   decisionBadge.classList.add(decision.status);
@@ -361,7 +485,7 @@ function renderMessage(message, flash = false) {
     <span class="messageReason">${escapeHtml(outcome.detail)}${decision.reason ? ` · ${escapeHtml(decision.reason)}` : ""}</span>
   `;
   text.textContent = escapeText(message.text);
-  cue.textContent = operatorCueForMessage(message);
+  cue.textContent = `${pillarCueForMessage(message, pillar)} · ${operatorCueForMessage(message)}`;
   time.textContent = formatTime(message.createdAt || message.receivedAt);
   time.dateTime = message.createdAt || message.receivedAt || "";
   actions.forEach((button) => {
@@ -382,6 +506,7 @@ function renderFeed() {
   const visible = state.messages.filter(passesFilters).slice(-250);
   state.visibleCount = visible.length;
   renderDecisionBar();
+  renderPillarRail();
   feed.innerHTML = "";
   if (!visible.length) {
     const empty = document.createElement("div");
@@ -401,6 +526,7 @@ function appendMessage(message) {
   if (state.messages.length > 500) state.messages.splice(0, state.messages.length - 500);
   renderRadar();
   renderDecisionBar();
+  renderPillarRail();
   if (state.paused) {
     state.queue.push(message);
     updateConnectionLight();
@@ -446,6 +572,27 @@ function renderDecisionBar() {
       </button>
     `).join("")}
   `;
+}
+
+function renderPillarRail() {
+  const node = $("pillarButtons");
+  if (!node) return;
+  const scoped = state.messages.filter((message) => passesBaseFilters(message, { ignorePillar: true }));
+  const counts = pillarCounts(scoped);
+  node.innerHTML = strategicPillars()
+    .map((pillar) => `
+      <button
+        class="pillarButton ${pillar.id}${state.pillarFilter === pillar.id ? " active" : ""}"
+        type="button"
+        data-pillar="${escapeHtml(pillar.id)}"
+        title="${escapeHtml(pillar.detail || pillar.short || pillar.label)}"
+      >
+        <span>${escapeHtml(pillar.label)}</span>
+        <small>${escapeHtml(pillar.short || "")}</small>
+        <strong>${counts[pillar.id] || 0}</strong>
+      </button>
+    `)
+    .join("");
 }
 
 function renderSources() {
@@ -681,7 +828,14 @@ function renderConfig() {
   const contextChips = (config.context || [])
     .map((item) => `<span class="contextChip">${escapeHtml(item)}</span>`)
     .join("");
-  $("contextRail").innerHTML = `${segmentControls}<div class="contextChips" hidden>${contextChips}</div>`;
+  const pillarControls = `
+    <div class="pillarMode" aria-label="Strategic pillar lens">
+      <span class="toolbarLabel">Pillar Lens</span>
+      <div id="pillarButtons" class="pillarButtons" role="group" aria-label="Strategic pillars"></div>
+    </div>
+  `;
+  $("contextRail").innerHTML = `${segmentControls}${pillarControls}<div class="contextChips" hidden>${contextChips}</div>`;
+  renderPillarRail();
   $("runOfShow").innerHTML = (config.segments || [])
     .map(
       (segment) => `
@@ -802,12 +956,13 @@ function formatFocusBrief(item) {
     `Market Bubble focus: ${item.term}`,
     `Current segment: ${activeSegment}`,
     `Topic segment: ${item.segment}`,
+    item.sample ? `Strategic pillar: ${pillarForMessage(item.sample).label}` : "",
     `Timing note: ${timing}`,
     `Recent heat: ${item.count} mentions in the last 10 minutes, ${item.usable || 0} usable, ${item.high} high-signal.`,
     `Sources: ${formatSources(item.sourceCounts)}`,
     `Suggested on-air move: ${suggestedPrompt(item.term, item)}`,
     `Sample: ${sample}`,
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 }
 
 function openQueueItems() {
@@ -848,6 +1003,7 @@ function assistMixSummary(counts) {
 function moveFromMessage(label, body, detail, message, status = "use") {
   const kind = message?.kind || message?.operator?.kind || smartKindForMessage(message);
   const outcome = operatorOutcomeForMessage(message, { status, label: status === "use" ? "Use Now" : "Rest", reason: detail, kind });
+  const pillar = message ? pillarForMessage(message) : null;
   return {
     label,
     body,
@@ -855,6 +1011,8 @@ function moveFromMessage(label, body, detail, message, status = "use") {
     actionType: kind,
     outcomeLabel: outcome.label,
     outcomeDetail: outcome.detail,
+    pillarId: pillar?.id || "",
+    pillarLabel: pillar?.label || "",
   };
 }
 
@@ -987,6 +1145,9 @@ function renderProducerAssist() {
   const move = producerNextMove();
   const actionType = move.actionType || assistActionType(move.label);
   const outcome = assistOutcomeForMove(move);
+  const movePillar = move.pillarId
+    ? pillarById(move.pillarId)
+    : dominantPillarForMessages([...nowItems, ...parkedTopicFit, ...state.messages.filter((message) => decisionForMessage(message).status === "use")]);
   const mixSummary = assistMixSummary(counts);
   const topRadar = topRadarForSegment();
 
@@ -1002,6 +1163,7 @@ function renderProducerAssist() {
     <div class="nextMoveTop">
       <span class="nextMoveLabel">Use Now</span>
       <span class="assistType ${actionType}">${escapeHtml(outcome.label)}</span>
+      ${movePillar ? `<span class="assistType pillar ${escapeHtml(movePillar.id)}">${escapeHtml(movePillar.label)}</span>` : ""}
     </div>
     <h3>${escapeHtml(move.label)}</h3>
     <p>${escapeHtml(move.body)}</p>
@@ -1029,12 +1191,14 @@ function renderOperatorBrief() {
   const segment = segmentConfigByName(activeSegment);
   const openItems = openQueueItems();
   const nowItems = openItems.filter((item) => segmentForMessage(item) === activeSegment);
-  const counts = queueKindCounts(nowItems);
-  const feedUseNowCount = state.messages.filter((message) =>
+  const useNowMessages = state.messages.filter((message) =>
     state.filters.has(message.source) &&
     segmentForMessage(message) === activeSegment &&
     decisionForMessage(message).status === "use"
-  ).length;
+  );
+  const activePillar = dominantPillarForMessages([...nowItems, ...useNowMessages]);
+  const counts = queueKindCounts(nowItems);
+  const feedUseNowCount = useNowMessages.length;
   const useNowCount = Math.max(feedUseNowCount, nowItems.length);
   const move = producerNextMove();
   const outcome = assistOutcomeForMove(move);
@@ -1048,12 +1212,12 @@ function renderOperatorBrief() {
     <button class="briefCard segment" type="button" data-brief-action="segment">
       <span>Live Segment</span>
       <strong>${escapeHtml(activeSegment || "No segment")}</strong>
-      <small>${escapeHtml(segment?.brief || "Set today's rundown in Show Notes.")}</small>
+      <small>${activePillar ? `Pillar: ${escapeHtml(activePillar.label)} · ` : ""}${escapeHtml(segment?.brief || "Set today's rundown in Show Notes.")}</small>
     </button>
     <button class="briefCard use" type="button" data-brief-action="use" data-feed-ready="${feedUseNowCount}" data-queue-ready="${nowItems.length}">
       <span>Use Now</span>
       <strong>${escapeHtml(String(useNowCount))} ready</strong>
-      <small>${escapeHtml(move.label)} · ${escapeHtml(outcome.label)}</small>
+      <small>${escapeHtml(move.label)} · ${escapeHtml(outcome.label)}${move.pillarLabel ? ` · ${escapeHtml(move.pillarLabel)}` : ""}</small>
     </button>
     <button class="briefCard heat" type="button" data-brief-action="radar"${radar ? ` data-term="${escapeHtml(radar.term)}"` : ""}>
       <span>Heat</span>
@@ -1128,8 +1292,11 @@ function filteredQueueItems() {
     : state.queueFilter === "done"
       ? items.filter((item) => item.done)
       : items.filter((item) => !item.done && item.kind === state.queueFilter);
+  const pillarFiltered = state.pillarFilter === "all"
+    ? filtered
+    : filtered.filter((item) => pillarForMessage(item).id === state.pillarFilter);
   const activeSegment = currentSegmentName();
-  return [...filtered].sort((a, b) => {
+  return [...pillarFiltered].sort((a, b) => {
     const aCurrent = segmentForMessage(a) === activeSegment ? 2 : topicSegmentForMessage(a) === activeSegment ? 1 : 0;
     const bCurrent = segmentForMessage(b) === activeSegment ? 2 : topicSegmentForMessage(b) === activeSegment ? 1 : 0;
     return (bCurrent - aCurrent) || (queueTimeMs(b) - queueTimeMs(a));
@@ -1157,6 +1324,7 @@ function renderProducerQueue() {
       (item) => {
         const segment = segmentForMessage(item);
         const topicSegment = topicSegmentForMessage(item);
+        const pillar = pillarForMessage(item);
         const topicMismatch = topicSegment && topicSegment !== segment;
         return `
         <article class="queueItem ${item.source}${item.done ? " done" : ""}${segment === activeSegment ? " segmentCurrent" : ""}${topicSegment === activeSegment && segment !== activeSegment ? " topicCurrent" : ""}">
@@ -1172,7 +1340,7 @@ function renderProducerQueue() {
           </div>
           <strong>${escapeHtml(item.displayName || "unknown")}</strong>
           <p>${escapeHtml(item.text)}</p>
-          <div class="queueSegment">${segment === activeSegment ? "Now" : "Park"} · ${escapeHtml(segment)}</div>
+          <div class="queueSegment">${segment === activeSegment ? "Now" : "Park"} · ${escapeHtml(segment)} · ${escapeHtml(pillar.label)}</div>
           ${topicMismatch ? `<div class="queueTopic">Topic · ${escapeHtml(topicSegment)}</div>` : ""}
           ${(item.matchedTerms || []).length ? `<div class="queueTerms">${item.matchedTerms.map((term) => `<span>${escapeHtml(term)}</span>`).join("")}</div>` : ""}
           <div class="queueMeta">${escapeHtml(item.sourceLabel || item.source)}${item.channel ? ` · #${escapeHtml(item.channel)}` : ""} · ${escapeHtml(formatTime(item.createdAt))}</div>
@@ -1235,6 +1403,7 @@ function renderActiveFilterBar() {
   ];
   if (state.decisionFilter !== "all") parts.push(state.decisionFilter);
   if (state.intentFilter !== "all") parts.push(type);
+  if (state.pillarFilter !== "all") parts.push(pillarById(state.pillarFilter)?.label || state.pillarFilter);
   if (state.segmentLens) parts.push("lens on");
   if (state.query.trim()) parts.push(`search: ${state.query.trim()}`);
   if (state.focusTerm) parts.push(`focus: ${state.focusTerm}`);
@@ -1394,8 +1563,9 @@ function formatEpisodeBrief() {
 function formatQueueItem(item) {
   const segment = segmentForMessage(item);
   const topicSegment = topicSegmentForMessage(item);
+  const pillar = pillarForMessage(item);
   const topicNote = topicSegment && topicSegment !== segment ? ` · Topic ${topicSegment}` : "";
-  return `[${segment} · ${queueKindLabel(item.kind)}${topicNote} · ${item.sourceLabel || item.source}${item.channel ? ` #${item.channel}` : ""}] ${item.displayName || "unknown"}: ${item.text}`;
+  return `[${segment} · ${pillar.label} · ${queueKindLabel(item.kind)}${topicNote} · ${item.sourceLabel || item.source}${item.channel ? ` #${item.channel}` : ""}] ${item.displayName || "unknown"}: ${item.text}`;
 }
 
 function formatRundown() {
@@ -1441,6 +1611,7 @@ function formatSegmentBrief() {
   const move = producerNextMove();
   const outcome = assistOutcomeForMove(move);
   const counts = queueKindCounts(nowItems);
+  const briefPillar = dominantPillarForMessages([...nowItems, ...state.messages.filter((message) => decisionForMessage(message).status === "use")]);
   const queueLines = nowItems.slice(0, 5).map((item, index) => `${index + 1}. ${formatQueueItem(item)}`);
   const parkedLines = parkedTopicFit.slice(0, 3).map((item, index) => `${index + 1}. ${formatQueueItem(item)}`);
 
@@ -1448,6 +1619,7 @@ function formatSegmentBrief() {
     "Market Bubble segment brief",
     `Current segment: ${activeSegment}`,
     `Next move: ${move.label} - ${move.body}`,
+    briefPillar ? `Strategic pillar: ${briefPillar.label} - ${briefPillar.detail || briefPillar.short}` : "",
     `Can become: ${outcome.label} - ${outcome.detail}`,
     `Why: ${move.detail}`,
     radar
@@ -1685,6 +1857,17 @@ function bindControls() {
   });
 
   $("contextRail").addEventListener("click", async (event) => {
+    const pillarButton = event.target.closest(".pillarButton");
+    if (pillarButton) {
+      const pillar = pillarButton.dataset.pillar || "all";
+      state.pillarFilter = state.pillarFilter === pillar ? "all" : pillar;
+      renderPillarRail();
+      renderRadar();
+      renderFeed();
+      renderProducerQueue();
+      updateMetrics();
+      return;
+    }
     const button = event.target.closest(".segmentButton");
     if (!button) return;
     const currentSegment = button.dataset.segment || "";

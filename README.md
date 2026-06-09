@@ -19,11 +19,18 @@ This desk pulls them into one place and tells the operator what to do:
 
 The point is not to read every message. The point is to turn a messy live feed into a short, useful rundown.
 
+The desk now centers the feed around three Market Bubble pillars:
+
+- `Make Money`: trades, odds, mispricings, position reads, and market calls.
+- `Leverage AI`: agents, compute, automation, infrastructure, and AI-native edge.
+- `Command Attention`: clips, culture, guest moments, timeline heat, and social reach.
+
 ## What It Does
 
 - Combines Twitch, Kick, and X into one live feed.
 - Labels where every message came from.
 - Tags each message by Market Bubble segment.
+- Tags each message by strategic pillar: `Make Money`, `Leverage AI`, or `Command Attention`.
 - Marks each message as `Use Now`, `Watch`, `Park`, or `Noise`.
 - Detects questions, market signals, clip candidates, culture chatter, and normal chat.
 - Gives concrete, operator-ready messages priority over generic keyword hype.
@@ -47,6 +54,7 @@ These are the biggest improvements from the latest passes:
 - Signal Radar ranks by usable items, not just mention count.
 - Producer Assist can suggest an unqueued feed item directly.
 - The top Operator Brief now gives a first-glance read on the live segment, Use Now items, topic heat, and host handoff.
+- `Pillar Lens` lets the operator filter the feed and queue around the three show pillars.
 - The demo feed is now show-aware and less repetitive.
 - The repo includes `render.yaml`, `/healthz`, and clearer deployment docs.
 

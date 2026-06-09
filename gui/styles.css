@@ -422,15 +422,24 @@ h2 {
   align-items: center;
   flex-wrap: wrap;
   gap: 9px;
-  width: 100%;
+  flex: 1 1 520px;
 }
 
 .segmentButtons,
-.contextChips {
+.contextChips,
+.pillarButtons {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.pillarMode {
+  display: flex;
+  align-items: center;
+  flex: 1 1 430px;
+  flex-wrap: wrap;
+  gap: 9px;
 }
 
 .contextChips[hidden] {
@@ -458,6 +467,71 @@ h2 {
   border-color: var(--line-strong);
   background: rgba(242, 198, 112, 0.08);
   color: var(--gold-bright);
+}
+
+.pillarButton {
+  min-height: 34px;
+  display: inline-grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1px 9px;
+  align-items: center;
+  min-width: 142px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--muted);
+  padding: 6px 9px;
+  text-align: left;
+}
+
+.pillarButton span {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 950;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pillarButton small {
+  grid-column: 1;
+  overflow: hidden;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pillarButton strong {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  color: var(--gold-bright);
+  font-size: 16px;
+}
+
+.pillarButton.active,
+.pillarButton:hover {
+  opacity: 1;
+}
+
+.pillarButton.make-money.active,
+.pillarButton.make-money:hover {
+  border-color: rgba(83, 252, 24, 0.34);
+  background: rgba(83, 252, 24, 0.055);
+}
+
+.pillarButton.leverage-ai.active,
+.pillarButton.leverage-ai:hover {
+  border-color: rgba(123, 220, 255, 0.34);
+  background: rgba(123, 220, 255, 0.055);
+}
+
+.pillarButton.command-attention.active,
+.pillarButton.command-attention:hover {
+  border-color: rgba(255, 155, 124, 0.34);
+  background: rgba(255, 155, 124, 0.06);
 }
 
 .contextChip,
@@ -1008,7 +1082,8 @@ h2 {
   background: rgba(242, 198, 112, 0.1);
 }
 
-.segmentPill {
+.segmentPill,
+.pillarPill {
   width: max-content;
   max-width: 100%;
   display: inline-flex;
@@ -1024,6 +1099,24 @@ h2 {
   font-size: 10px;
   font-weight: 900;
   text-transform: uppercase;
+}
+
+.pillarPill.make-money {
+  border-color: rgba(83, 252, 24, 0.28);
+  color: #b9ffa5;
+  background: rgba(83, 252, 24, 0.04);
+}
+
+.pillarPill.leverage-ai {
+  border-color: rgba(123, 220, 255, 0.3);
+  color: #b7eaff;
+  background: rgba(123, 220, 255, 0.045);
+}
+
+.pillarPill.command-attention {
+  border-color: rgba(255, 155, 124, 0.32);
+  color: #ffbea8;
+  background: rgba(255, 155, 124, 0.045);
 }
 
 .matchTerms {
@@ -1226,6 +1319,7 @@ h2 {
 }
 
 .panelBlock {
+  min-width: 0;
   border: 1px solid var(--line);
   background: var(--panel);
   box-shadow: var(--shadow);
@@ -1292,7 +1386,8 @@ h2 {
 .nextMoveTop {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  flex-wrap: wrap;
+  justify-content: flex-start;
   gap: 10px;
 }
 
@@ -1346,6 +1441,24 @@ h2 {
   border-color: rgba(123, 220, 255, 0.34);
   color: #b7eaff;
   background: rgba(123, 220, 255, 0.055);
+}
+
+.assistType.pillar.make-money {
+  border-color: rgba(83, 252, 24, 0.32);
+  color: #b9ffa5;
+  background: rgba(83, 252, 24, 0.045);
+}
+
+.assistType.pillar.leverage-ai {
+  border-color: rgba(123, 220, 255, 0.34);
+  color: #b7eaff;
+  background: rgba(123, 220, 255, 0.055);
+}
+
+.assistType.pillar.command-attention {
+  border-color: rgba(255, 155, 124, 0.38);
+  color: #ffbea8;
+  background: rgba(255, 155, 124, 0.055);
 }
 
 .nextMove h3 {
@@ -1584,6 +1697,7 @@ h2 {
 
 .queueItem,
 .segmentItem {
+  min-width: 0;
   border: 1px solid rgba(255, 255, 255, 0.09);
   background: rgba(0, 0, 0, 0.24);
   padding: 12px;
@@ -1626,12 +1740,14 @@ h2 {
 .queueTop {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 8px;
 }
 
 .queueActions {
+  min-width: 0;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -1640,6 +1756,8 @@ h2 {
 }
 
 .queueKind {
+  min-width: 0;
+  overflow-wrap: anywhere;
   color: var(--gold);
   font-size: 11px;
   font-weight: 900;
@@ -2291,22 +2409,39 @@ h2 {
     flex-direction: column;
   }
 
+  .sidePanel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .sourceToggles,
   .viewToggles,
   .compactControls,
+  .pillarButtons,
   .searchBox,
   .segmentMode,
+  .pillarMode,
   .contextChips,
   .decisionBar {
     width: 100%;
   }
 
+  .segmentMode,
+  .pillarMode {
+    flex: 1 1 100%;
+  }
+
   .sourceToggle,
   .viewToggle,
   .toggleButton,
-  .segmentButton {
+  .segmentButton,
+  .pillarButton {
     flex: 1 1 120px;
     justify-content: center;
+  }
+
+  .pillarButton {
+    min-width: 0;
+    flex: 1 1 100%;
   }
 
   .decisionBar {
@@ -2376,7 +2511,7 @@ h2 {
   }
 
   .sidePanel {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .assistActions {

@@ -27,6 +27,7 @@ The desk helps the operator answer one simple question:
 - Pulls Twitch, Kick, and X into one live feed.
 - Labels every message by source.
 - Shows which Market Bubble segment each message belongs to.
+- Shows which core show pillar each message supports: make money, leverage AI, or command attention.
 - Marks each message as `Use Now`, `Watch`, `Park`, or `Noise`.
 - Routes good items into an Operator Queue.
 - Separates questions, market signals, and clip candidates.
@@ -85,6 +86,8 @@ A basic chat aggregator says:
 Market Bubble Live Desk says:
 
 > Here is what matters for this segment, and what the operator should do with it.
+
+It also says why the item matters: money, AI leverage, or attention.
 
 That is the difference.
 

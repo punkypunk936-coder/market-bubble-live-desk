@@ -13,7 +13,11 @@ The top strip tells the room four things immediately:
 - `Heat`: which topic is building and whether it needs action or monitoring.
 - `Handoff`: what is ready for hosts, clips, or segment notes.
 
+Under that, `Pillar Lens` keeps the show centered on the three things Market Bubble cares about: make money, leverage AI, and command attention.
+
 The feed is not just raw chat. Each item is labeled by what it can become: an on-air question, a market beat, a segment segue, a clip candidate, or something to park for later.
+
+Each item also gets a pillar label, so the operator knows why it matters: money angle, AI leverage, or attention play.
 
 So the producer is not asking, "What did chat say?"
 
@@ -25,10 +29,11 @@ That is the point of the desk: turn messy live audience input into a short, usab
 
 1. Start at the top brief.
 2. Click `Use Now` to show only actionable items for the current segment.
-3. Point out the `Potential` label on feed rows.
-4. Click `Heat` to show topic context in Signal Radar.
-5. Click `Handoff` to show the operator queue.
-6. End on Producer Assist: this is the next best move for the room.
+3. Click a `Pillar Lens` chip to show how the feed narrows by show strategy.
+4. Point out the `Potential` and pillar labels on feed rows.
+5. Click `Heat` to show topic context in Signal Radar.
+6. Click `Handoff` to show the operator queue.
+7. End on Producer Assist: this is the next best move for the room.
 
 ## Closing Line
 
