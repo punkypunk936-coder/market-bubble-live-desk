@@ -59,7 +59,21 @@ Railway is useful for speed. Render is the cleaner first recommendation here bec
 
 Fly.io is a good fit if the team wants more control over regions and container behavior. It is more operational than Render or Railway and does not have a true free tier for always-on production use.
 
-Use Fly only after the team knows this desk is part of the weekly production workflow.
+The repo includes `fly.toml` for an always-on demo service:
+
+```sh
+fly auth login
+fly launch --copy-config --no-deploy
+fly deploy
+```
+
+Default app URL:
+
+```txt
+https://market-bubble-live-desk.fly.dev
+```
+
+If the app name is taken, change `app` in `fly.toml` and deploy again.
 
 ## Docker
 
