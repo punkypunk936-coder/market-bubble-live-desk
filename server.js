@@ -780,6 +780,7 @@ async function runLatestShowRehearsal() {
       displayName: item.displayName || item.user,
       createdAt: new Date().toISOString(),
       meta: {
+        allowRepeat: true,
         rehearsal: "latest-show",
         airDate: appConfig.latestEpisode.airDate,
       },
@@ -880,6 +881,7 @@ async function handleApi(req, res, pathname) {
   if (req.method === "POST" && pathname === "/api/clear") {
     state.history = [];
     state.seen.clear();
+    state.recentText.clear();
     recomputeCounts();
     broadcast("snapshot", { history: state.history, ...publicState() });
     jsonResponse(res, 200, { ok: true });

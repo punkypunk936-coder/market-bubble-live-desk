@@ -323,6 +323,8 @@ function renderMessage(message, flash = false) {
   row.classList.add(`priority-${message.priority || "normal"}`);
   const decision = decisionForMessage(message);
   row.classList.add(`decision-${decision.status}`);
+  if (decision.status === "use") row.classList.add("use-now");
+  row.dataset.decision = decision.status;
   row.dataset.messageId = message.id;
   const queuedKinds = queuedKindsForMessage(message.id);
   if (queuedKinds.size) row.classList.add("queued");
@@ -353,9 +355,10 @@ function renderMessage(message, flash = false) {
   decisionBadge.classList.add(decision.status);
   decisionReason.classList.add(decision.status);
   const outcome = operatorOutcomeForMessage(message, decision);
+  row.dataset.potential = outcome.label;
   decisionReason.innerHTML = `
-    <strong>${decision.status === "use" ? `Potential: ${escapeHtml(outcome.label)}` : escapeHtml(outcome.label)}</strong>
-    <span>${escapeHtml(outcome.detail)}${decision.reason ? ` · ${escapeHtml(decision.reason)}` : ""}</span>
+    <strong class="messagePotential">${decision.status === "use" ? `Potential: ${escapeHtml(outcome.label)}` : escapeHtml(outcome.label)}</strong>
+    <span class="messageReason">${escapeHtml(outcome.detail)}${decision.reason ? ` · ${escapeHtml(decision.reason)}` : ""}</span>
   `;
   text.textContent = escapeText(message.text);
   cue.textContent = operatorCueForMessage(message);
@@ -1019,6 +1022,52 @@ function renderProducerAssist() {
   `;
 }
 
+function renderOperatorBrief() {
+  const node = $("operatorBrief");
+  if (!node) return;
+  const activeSegment = currentSegmentName();
+  const segment = segmentConfigByName(activeSegment);
+  const openItems = openQueueItems();
+  const nowItems = openItems.filter((item) => segmentForMessage(item) === activeSegment);
+  const counts = queueKindCounts(nowItems);
+  const feedUseNowCount = state.messages.filter((message) =>
+    state.filters.has(message.source) &&
+    segmentForMessage(message) === activeSegment &&
+    decisionForMessage(message).status === "use"
+  ).length;
+  const useNowCount = Math.max(feedUseNowCount, nowItems.length);
+  const move = producerNextMove();
+  const outcome = assistOutcomeForMove(move);
+  const radar = topRadarForSegment();
+  const radarMode = radar?.usable > 0 ? "Use or queue" : "Monitor";
+  const radarBody = radar
+    ? `${radarMode} · ${radar.count} recent · ${formatSources(radar.sourceCounts)}`
+    : "No watchlist heat yet";
+  const queueMix = assistMixSummary(counts);
+  node.innerHTML = `
+    <button class="briefCard segment" type="button" data-brief-action="segment">
+      <span>Live Segment</span>
+      <strong>${escapeHtml(activeSegment || "No segment")}</strong>
+      <small>${escapeHtml(segment?.brief || "Set today's rundown in Show Notes.")}</small>
+    </button>
+    <button class="briefCard use" type="button" data-brief-action="use" data-feed-ready="${feedUseNowCount}" data-queue-ready="${nowItems.length}">
+      <span>Use Now</span>
+      <strong>${escapeHtml(String(useNowCount))} ready</strong>
+      <small>${escapeHtml(move.label)} · ${escapeHtml(outcome.label)}</small>
+    </button>
+    <button class="briefCard heat" type="button" data-brief-action="radar"${radar ? ` data-term="${escapeHtml(radar.term)}"` : ""}>
+      <span>Heat</span>
+      <strong>${escapeHtml(radar?.term || "Quiet")}</strong>
+      <small>${escapeHtml(radarBody)}</small>
+    </button>
+    <button class="briefCard queue" type="button" data-brief-action="queue">
+      <span>Handoff</span>
+      <strong>${openItems.length} open</strong>
+      <small>For hosts: ${escapeHtml(queueMix)}</small>
+    </button>
+  `;
+}
+
 function renderRadar() {
   const rows = computeRadar();
   const list = $("radarList");
@@ -1031,6 +1080,7 @@ function renderRadar() {
     $("focusBrief").innerHTML = `<div class="emptyState compact">Select a radar item when signals appear.</div>`;
     $("copyFocusBtn").disabled = true;
     renderProducerAssist();
+    renderOperatorBrief();
     return;
   }
   list.innerHTML = rows
@@ -1060,6 +1110,7 @@ function renderRadar() {
     : `<div class="emptyState compact">Select a radar item when signals appear.</div>`;
   $("copyFocusBtn").disabled = !briefItem;
   renderProducerAssist();
+  renderOperatorBrief();
 }
 
 function queueKindLabel(kind) {
@@ -1097,6 +1148,7 @@ function renderProducerQueue() {
   if (!items.length) {
     node.innerHTML = `<div class="emptyState compact">No ${state.queueFilter === "open" ? "open" : state.queueFilter} items.</div>`;
     renderProducerAssist();
+    renderOperatorBrief();
     return;
   }
   node.innerHTML = items
@@ -1130,6 +1182,7 @@ function renderProducerQueue() {
     )
     .join("");
   renderProducerAssist();
+  renderOperatorBrief();
 }
 
 function updateMetrics(payload) {
@@ -1408,6 +1461,23 @@ function formatSegmentBrief() {
   ].filter((line) => line !== "").join("\n");
 }
 
+function activateUseNowView() {
+  state.intentFilter = "all";
+  state.decisionFilter = "use";
+  state.segmentLens = true;
+  state.focusTerm = "";
+  state.query = "";
+  $("searchInput").value = "";
+  $("segmentLensBtn").classList.add("active");
+  document.querySelectorAll(".viewToggle").forEach((item) => {
+    item.classList.toggle("active", item.dataset.intent === "all");
+  });
+  renderRadar();
+  renderFeed();
+  renderProducerQueue();
+  updateMetrics();
+}
+
 function bindControls() {
   $("pauseBtn").addEventListener("click", () => {
     state.paused = !state.paused;
@@ -1448,20 +1518,7 @@ function bindControls() {
   });
 
   $("triageModeBtn").addEventListener("click", () => {
-    state.intentFilter = "all";
-    state.decisionFilter = "use";
-    state.segmentLens = true;
-    state.focusTerm = "";
-    state.query = "";
-    $("searchInput").value = "";
-    $("segmentLensBtn").classList.add("active");
-    document.querySelectorAll(".viewToggle").forEach((item) => {
-      item.classList.toggle("active", item.dataset.intent === "all");
-    });
-    renderRadar();
-    renderFeed();
-    renderProducerQueue();
-    updateMetrics();
+    activateUseNowView();
   });
 
   $("copySegmentBriefBtn").addEventListener("click", async () => {
@@ -1686,6 +1743,42 @@ function bindControls() {
     state.decisionFilter = button.dataset.decision || "all";
     renderFeed();
     updateMetrics();
+  });
+
+  $("operatorBrief").addEventListener("click", (event) => {
+    const card = event.target.closest(".briefCard");
+    if (!card) return;
+    const action = card.dataset.briefAction;
+    if (action === "use") {
+      activateUseNowView();
+      const feedReady = Number(card.dataset.feedReady || 0);
+      const queueReady = Number(card.dataset.queueReady || 0);
+      const target = feedReady > 0 || queueReady === 0 ? $("feed") : document.querySelector(".queueBlock");
+      target?.scrollIntoView({ block: "start", behavior: "smooth" });
+      return;
+    }
+    if (action === "radar") {
+      const term = card.dataset.term || topRadarForSegment()?.term || "";
+      if (term) {
+        state.focusTerm = term;
+        state.decisionFilter = "all";
+        state.segmentLens = false;
+        state.query = "";
+        $("searchInput").value = "";
+        $("segmentLensBtn").classList.remove("active");
+        renderRadar();
+        renderFeed();
+      }
+      document.querySelector(".radarBlock")?.scrollIntoView({ block: "start", behavior: "smooth" });
+      return;
+    }
+    if (action === "queue") {
+      document.querySelector(".queueBlock")?.scrollIntoView({ block: "start", behavior: "smooth" });
+      return;
+    }
+    if (action === "segment") {
+      $("contextRail")?.scrollIntoView({ block: "start", behavior: "smooth" });
+    }
   });
 
   $("feed").addEventListener("click", async (event) => {

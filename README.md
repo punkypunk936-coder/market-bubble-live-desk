@@ -4,7 +4,7 @@ Internal live production desk for Market Bubble: one real-time feed across Twitc
 
 Market Bubble is built around prediction-market discourse: digital culture, sports, crypto, tech, attention, and speculation. This desk is meant for the room during live recording, not as a generic chat toy.
 
-For the simplest business pitch, see [PRODUCT_BRIEF.md](PRODUCT_BRIEF.md).
+For the simplest business pitch, see [PRODUCT_BRIEF.md](PRODUCT_BRIEF.md). For a short recording script, see [LOOM_SCRIPT.md](LOOM_SCRIPT.md).
 
 ## Plain-English Version
 
@@ -46,6 +46,7 @@ These are the biggest improvements from the latest passes:
 - `Triage Mode` now focuses on `Use Now` items for the current segment.
 - Signal Radar ranks by usable items, not just mention count.
 - Producer Assist can suggest an unqueued feed item directly.
+- The top Operator Brief now gives a first-glance read on the live segment, Use Now items, topic heat, and host handoff.
 - The demo feed is now show-aware and less repetitive.
 - The repo includes `render.yaml`, `/healthz`, and clearer deployment docs.
 

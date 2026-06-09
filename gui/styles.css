@@ -317,6 +317,88 @@ h2 {
   line-height: 1.1;
 }
 
+.operatorBrief {
+  display: grid;
+  grid-template-columns: 1.1fr 0.85fr 1fr 0.85fr;
+  gap: 10px;
+  padding: 12px 18px;
+  border-bottom: 1px solid rgba(242, 198, 112, 0.16);
+  background:
+    linear-gradient(90deg, rgba(83, 252, 24, 0.055), transparent 35%),
+    rgba(0, 0, 0, 0.2);
+}
+
+.briefCard {
+  min-width: 0;
+  min-height: 92px;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.095);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.24);
+  color: var(--text);
+  padding: 12px;
+  text-align: left;
+}
+
+.briefCard:hover {
+  border-color: var(--line-strong);
+  background: rgba(242, 198, 112, 0.065);
+}
+
+.briefCard span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 950;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.briefCard strong {
+  min-width: 0;
+  display: block;
+  overflow: hidden;
+  color: var(--gold-bright);
+  font-size: 20px;
+  line-height: 1.08;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.briefCard small {
+  min-width: 0;
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.briefCard.use {
+  border-color: rgba(83, 252, 24, 0.24);
+  background: rgba(83, 252, 24, 0.045);
+}
+
+.briefCard.use strong {
+  color: #b9ffa5;
+}
+
+.briefCard.heat {
+  border-color: rgba(123, 220, 255, 0.24);
+}
+
+.briefCard.heat strong {
+  color: #b7eaff;
+}
+
+.briefCard.queue {
+  border-color: rgba(242, 198, 112, 0.24);
+}
+
 .contextRail {
   min-height: 42px;
   display: flex;
@@ -2144,6 +2226,10 @@ h2 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  .operatorBrief {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .decisionBarLabel {
     grid-column: 1 / -1;
     min-height: 38px;
@@ -2223,6 +2309,21 @@ h2 {
     overflow-x: auto;
     padding: 12px;
     scrollbar-color: rgba(242, 198, 112, 0.3) transparent;
+  }
+
+  .operatorBrief {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .briefCard {
+    min-height: 86px;
+    padding: 10px;
+  }
+
+  .briefCard strong {
+    font-size: 17px;
   }
 
   .decisionBarLabel {
