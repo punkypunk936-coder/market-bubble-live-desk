@@ -23,15 +23,3 @@ services:
         value: "120000"
       - key: WORKSPACE_NAME
         value: Market Bubble Live Desk
-      - key: TWITCH_CHANNELS
-        sync: false
-      - key: TWITCH_USERNAME
-        sync: false
-      - key: TWITCH_TOKEN
-        sync: false
-      - key: KICK_CHANNELS
-        sync: false
-      - key: X_BEARER_TOKEN
-        sync: false
-      - key: X_RULES
-        sync: false

@@ -30,7 +30,7 @@ Do not use GitHub Pages, Vercel static hosting, Netlify static hosting, or any p
 - `X_BEARER_TOKEN`
 - `X_RULES`
 
-5. Leave `DEMO_MODE=1` for a shareable review link.
+5. For the first shareable review link, you can skip those secrets and leave `DEMO_MODE=1`.
 6. Set `DEMO_MODE=0` when live credentials are ready.
 7. Use `/healthz` as the health check path.
 
