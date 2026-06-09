@@ -4,9 +4,13 @@
   "private": true,
   "description": "Market Bubble internal live desk for Twitch, X, and Kick audience signals.",
   "main": "server.js",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "start": "node server.js",
-    "dev": "DEMO_MODE=1 node server.js"
+    "dev": "DEMO_MODE=1 node server.js",
+    "bundle:eb": "bash scripts/make-eb-bundle.sh"
   },
   "dependencies": {
     "ws": "^8.21.0"

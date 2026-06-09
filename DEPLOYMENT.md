@@ -1,93 +1,92 @@
-# Deployment
+# AWS Deployment
 
-Deploy this as a Node web service. Static hosts will not work because the app keeps long-running source connections and streams updates to browsers through Server-Sent Events.
+Deploy this as a long-running Node web service. Do not use static hosting: the desk keeps live source connections and streams browser updates through Server-Sent Events.
 
 ## Recommendation
 
-Use Render Starter for the first external Market Bubble review.
+Use AWS Elastic Beanstalk first.
 
-Why:
+Why this fits:
 
-- the repo already includes `render.yaml`
-- it can auto-deploy from GitHub on every push
-- it supports a long-running Node service
-- it supports managed TLS and a public `onrender.com` URL
-- the included persistent disk keeps `data/operator-state.json` across restarts
+- it runs a normal Node.js web server
+- it gives you a public AWS URL
+- it handles EC2, load balancing, logs, health checks, and restarts
+- it does not require Docker
+- this repo now includes `Procfile` and `.ebextensions/01_market_bubble.config`
 
-Do not use GitHub Pages, Vercel static hosting, Netlify static hosting, or any purely static host. The desk is a live Node server, not a static page.
+## Elastic Beanstalk Console Path
 
-## Render Always-On Path
+1. Open AWS Console.
+2. Search for `Elastic Beanstalk`.
+3. Click `Create application`.
+4. Application name: `market-bubble-live-desk`.
+5. Environment tier: `Web server environment`.
+6. Platform: `Node.js`.
+7. Application code:
+   - easiest first pass: upload a source bundle zip from this repo
+   - later: connect GitHub through AWS CodePipeline if you want automatic deploys
+8. Environment type:
+   - choose `Single instance` for the cheapest internal demo
+   - choose `Load balanced` later if Market Bubble needs more reliability
+9. Keep the default public URL.
+10. Create the environment.
 
-1. In Render, create a Blueprint from the GitHub repo.
-2. Render will read `render.yaml`.
-3. Keep the service on `starter` or higher. Free is only useful for a temporary preview because it can spin down and lose local filesystem state.
-4. Fill the synced secrets in the dashboard:
+The app listens on `PORT=8080` in Elastic Beanstalk and exposes `/healthz` for health checks.
 
-- `TWITCH_CHANNELS`
-- `TWITCH_USERNAME`
-- `TWITCH_TOKEN`
-- `KICK_CHANNELS`
-- `X_BEARER_TOKEN`
-- `X_RULES`
+## Make The Source Bundle
 
-5. For the first shareable review link, you can skip those secrets and leave `DEMO_MODE=1`.
-6. Set `DEMO_MODE=0` when live credentials are ready.
-7. Use `/healthz` as the health check path.
-
-Manual Render setup also works:
-
-- Build command: `npm ci`
-- Start command: `npm start`
-- Health check path: `/healthz`
-- Persistent disk mount: `/opt/render/project/src/data`
-- Minimum paid instance: Starter
-
-## Railway
-
-Railway is a strong quick-demo option if the team wants a fast public URL and simple GitHub deploys.
-
-1. Create a new Railway project from the GitHub repo.
-2. Railway should detect Node automatically or use the Dockerfile.
-3. Add the environment variables from `.env.example`.
-4. Keep it as a persistent service, not serverless, for live-show use.
-5. Set `DEMO_MODE=1` for review, then `DEMO_MODE=0` for live mode.
-6. Configure `/healthz` as the health check if Railway asks for one.
-
-Railway is useful for speed. Render is the cleaner first recommendation here because the blueprint and disk config are now committed.
-
-## Fly.io
-
-Fly.io is a good fit if the team wants more control over regions and container behavior. It is more operational than Render or Railway and does not have a true free tier for always-on production use.
-
-The repo includes `fly.toml` for an always-on demo service:
+From the repo root:
 
 ```sh
-fly auth login
-fly launch --copy-config --no-deploy
-fly deploy
+npm run bundle:eb
 ```
 
-Default app URL:
+Upload `market-bubble-live-desk-eb.zip` to Elastic Beanstalk.
+
+## First Review Mode
+
+The checked-in Elastic Beanstalk config uses:
 
 ```txt
-https://market-bubble-live-desk.fly.dev
+DEMO_MODE=1
+PORT=8080
+HOST=0.0.0.0
+WORKSPACE_NAME=Market Bubble Live Desk
 ```
 
-If the app name is taken, change `app` in `fly.toml` and deploy again.
+That gives you a shareable external demo without Twitch/X/Kick credentials.
 
-## Docker
+## Live Source Mode
+
+When the team is ready for real source ingestion, set these Elastic Beanstalk environment variables in `Configuration > Software > Environment properties`:
+
+```txt
+DEMO_MODE=0
+TWITCH_CHANNELS=marketbubble
+TWITCH_USERNAME=bot_login
+TWITCH_TOKEN=oauth:token
+KICK_CHANNELS=marketbubble
+X_BEARER_TOKEN=token
+X_RULES=marketbubble OR "Market Bubble" OR polymarket OR Bullpen OR Ansem OR Banks OR HYPE
+```
+
+Replace channel names and tokens with the real production values.
+
+## Health Check
+
+The repo sets the default process health check to:
+
+```txt
+/healthz
+```
+
+If the AWS console overrides this, set the health check path manually to `/healthz`.
+
+## Local Run
 
 ```sh
-docker build -t market-bubble-live-desk .
-docker run --rm -p 8899:8899 --env-file .env.example market-bubble-live-desk
+npm install
+npm run dev
 ```
 
-## External Review Mode
-
-For a shareable demo without exposing platform credentials:
-
-```sh
-DEMO_MODE=1 npm start
-```
-
-The demo feed uses Market Bubble-flavored sample messages based on prior show patterns and exercises the producer queue, radar, segment routing, and clip/question/signal workflow.
+Open `http://127.0.0.1:8899`.

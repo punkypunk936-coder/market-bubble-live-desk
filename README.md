@@ -2,8 +2,6 @@
 
 Internal live production desk for Market Bubble: one real-time feed across Twitch, X, and Kick, with source labels and a producer queue for questions, market signals, and clip candidates.
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/punkypunk936-coder/market-bubble-live-desk)
-
 Market Bubble is built around prediction-market discourse: digital culture, sports, crypto, tech, attention, and speculation. This desk is meant for the room during live recording, not as a generic chat toy.
 
 For the simplest business pitch, see [PRODUCT_BRIEF.md](PRODUCT_BRIEF.md). For a short recording script, see [LOOM_SCRIPT.md](LOOM_SCRIPT.md).
@@ -42,7 +40,7 @@ The desk now centers the feed around three Market Bubble pillars:
 - Gives a next best move in Producer Assist.
 - Creates copyable focus briefs and segment rundowns.
 - Includes previous-show context and latest-show rehearsal mode for demos.
-- Includes deployment guidance and a Render blueprint for an always-live web version.
+- Includes AWS Elastic Beanstalk deployment guidance for an always-live web version.
 
 ## Recent Product Fixes
 
@@ -58,7 +56,7 @@ These are the biggest improvements from the latest passes:
 - The top Operator Brief now gives a first-glance read on the live segment, Use Now items, topic heat, and host handoff.
 - `Pillar Lens` lets the operator filter the feed and queue around the three show pillars.
 - The demo feed is now show-aware and less repetitive.
-- The repo includes `render.yaml`, `/healthz`, and clearer deployment docs.
+- The repo includes `Procfile`, `.ebextensions`, `/healthz`, and AWS deployment docs.
 
 ## Local Run
 
@@ -106,12 +104,14 @@ For demos, open `Latest show rehearsal` and click `Run Rehearsal`.
 
 This is a Node HTTP server with long-lived outbound connections and Server-Sent Events, so deploy it as a web service, not as static hosting.
 
-Good fits:
+Best first fit:
 
-- Render Web Service
-- Railway service
-- Fly.io app
-- Any VPS/container host
+- AWS Elastic Beanstalk Node.js web server environment
+
+Also workable later:
+
+- AWS ECS/Fargate container service
+- EC2/VPS with Node managed by a process manager
 
 See [DEPLOYMENT.md](DEPLOYMENT.md).
 

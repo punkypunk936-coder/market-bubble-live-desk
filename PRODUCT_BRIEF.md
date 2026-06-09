@@ -37,7 +37,7 @@ The desk helps the operator answer one simple question:
 - Creates copyable focus briefs and segment rundowns.
 - Includes a latest-show rehearsal mode for demos and dry runs.
 - Includes previous-show context so the tool feels built for Market Bubble, not generic livestreaming.
-- Includes deployment docs and a Render blueprint for an always-live web version.
+- Includes AWS Elastic Beanstalk deployment docs for an always-live web version.
 
 ## Recent Fixes
 
@@ -108,4 +108,4 @@ The product is ready for internal review and demo mode.
 
 It can run locally today, and the repo includes deployment guidance for putting it online as a long-running Node web service.
 
-The recommended first deployment path is Render Starter because the app uses live server connections and should not be deployed as a static site.
+The recommended first deployment path is AWS Elastic Beanstalk because the app uses live server connections and should not be deployed as a static site.
