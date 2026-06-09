@@ -158,6 +158,25 @@
                 <div class="blockSubhead">Segments and watchlist</div>
               </div>
             </div>
+            <div class="todaySegments">
+              <div class="todaySegmentsTop">
+                <div>
+                  <strong>Today's Segments</strong>
+                  <span>Segment Mode and Use Now follow this rundown.</span>
+                </div>
+                <button id="editSegmentsBtn" class="miniButton" type="button">Edit Today's Segments</button>
+              </div>
+              <div id="todaySegmentsList" class="todaySegmentsList"></div>
+              <form id="segmentEditor" class="segmentEditor" hidden>
+                <div id="segmentEditorRows" class="segmentEditorRows"></div>
+                <div class="segmentEditorActions">
+                  <button id="addSegmentBtn" class="miniButton" type="button">Add Segment</button>
+                  <button id="resetSegmentsBtn" class="miniButton" type="button">Reset Defaults</button>
+                  <button id="cancelSegmentsBtn" class="miniButton" type="button">Cancel</button>
+                  <button id="saveSegmentsBtn" class="primaryButton" type="submit">Save Segments</button>
+                </div>
+              </form>
+            </div>
             <details>
               <summary>Latest show rehearsal</summary>
               <div id="episodeBrief" class="episodeBrief"></div>

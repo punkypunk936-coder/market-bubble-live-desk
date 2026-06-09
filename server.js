@@ -35,6 +35,29 @@ const SOURCE_LABELS = {
   system: "System",
 };
 
+const DEFAULT_SEGMENTS = [
+  {
+    name: "Future-Proof",
+    brief: "AI, compute, frontier tech, and post-AGI money rails.",
+    keywords: ["ai", "agent", "agents", "compute", "near", "hyperliquid", "hype", "frontier", "spacex", "venice", "nuclear", "infrastructure"],
+  },
+  {
+    name: "Culture Shock",
+    brief: "Internet-native moments, creator drama, viral clips, and attention.",
+    keywords: ["gta", "culture", "viral", "creator", "banks", "stream", "twitter", "x", "timeline", "attention", "clip", "mizkif", "faze", "ct"],
+  },
+  {
+    name: "Pick n' Roll",
+    brief: "Sports storylines, matchups, lines, and momentum.",
+    keywords: ["nba", "nfl", "mlb", "ufc", "sports", "spread", "line", "game", "match", "baseball", "bullpen", "bet"],
+  },
+  {
+    name: "The Price Is Wrong",
+    brief: "Mispricings, sentiment gaps, and market probabilities.",
+    keywords: ["60k", "liquidation", "liquidations", "funding", "open interest", "oi", "support", "resistance", "wick", "breakdown", "breakout", "mispriced", "probability", "odds", "polymarket", "zcash", "zec", "bitcoin", "btc", "eth", "ethereum", "sol", "solana", "market", "ticker", "short", "long"],
+  },
+];
+
 const appConfig = {
   workspaceName: process.env.WORKSPACE_NAME || "Market Bubble Live Desk",
   eyebrow: process.env.WORKSPACE_EYEBROW || "Internal producer console",
@@ -119,28 +142,52 @@ const appConfig = {
     ],
     watchTerms: ["Bitcoin", "BTC", "HyperLiquid", "HYPE", "Venice AI", "compounding", "Polymarket", "AI compute", "guest"],
   },
-  segments: [
-    {
-      name: "Future-Proof",
-      brief: "AI, compute, frontier tech, and post-AGI money rails.",
-    },
-    {
-      name: "Culture Shock",
-      brief: "Internet-native moments, creator drama, viral clips, and attention.",
-    },
-    {
-      name: "Pick n' Roll",
-      brief: "Sports storylines, matchups, lines, and momentum.",
-    },
-    {
-      name: "The Price Is Wrong",
-      brief: "Mispricings, sentiment gaps, and market probabilities.",
-    },
-  ],
+  segments: cloneSegments(DEFAULT_SEGMENTS),
   watchlist: envList("WORKSPACE_WATCHLIST").length
     ? envList("WORKSPACE_WATCHLIST")
     : ["Polymarket", "Bullpen", "Bullpen Competition", "BTC 60K", "liquidations", "Bitcoin", "funding", "open interest", "Zcash", "ZEC", "NEAR", "AI agents", "HYPE", "HyperLiquid", "Ethereum", "Solana", "GTA 6", "AI compute"],
 };
+
+function normalizeKeywordList(value) {
+  const raw = Array.isArray(value) ? value : String(value || "").split(",");
+  const seen = new Set();
+  return raw
+    .map((item) => String(item || "").trim())
+    .filter(Boolean)
+    .filter((item) => {
+      const key = item.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 18);
+}
+
+function cloneSegments(segments) {
+  return sanitizeSegments(segments, []);
+}
+
+function sanitizeSegments(input, fallback = DEFAULT_SEGMENTS) {
+  const source = Array.isArray(input) ? input : [];
+  const seen = new Set();
+  const cleaned = source
+    .map((segment) => {
+      const name = String(segment?.name || "").trim().replace(/\s+/g, " ").slice(0, 40);
+      if (!name) return null;
+      const key = name.toLowerCase();
+      if (seen.has(key)) return null;
+      seen.add(key);
+      return {
+        name,
+        brief: String(segment?.brief || "").trim().replace(/\s+/g, " ").slice(0, 140),
+        keywords: normalizeKeywordList(segment?.keywords),
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 8);
+  if (cleaned.length) return cleaned;
+  return fallback === input ? [] : sanitizeSegments(fallback, input);
+}
 
 function configuredSegmentNames() {
   return appConfig.segments.map((segment) => segment.name).filter(Boolean);
@@ -155,11 +202,53 @@ function normalizeSegmentName(value, fallback = appConfig.segments[0]?.name || "
 function segmentForText(text, terms = []) {
   const normalizedTerms = Array.isArray(terms) ? terms : [terms].filter(Boolean);
   const value = `${text || ""} ${normalizedTerms.join(" ")}`.toLowerCase();
-  if (/\b(nba|nfl|mlb|ufc|sports|spread|line|game|match|baseball|bullpen)\b/.test(value)) return "Pick n' Roll";
-  if (/\b(60k|liquidation|liquidations|funding|open interest|oi|support|resistance|wick|breakdown|breakout|mispriced|probability|odds|polymarket|zcash|zec|bitcoin|btc)\b/.test(value)) return "The Price Is Wrong";
-  if (/\b(ai|agents|compute|near|eth|ethereum|solana|sol|hyperliquid|hype|crypto|frontier)\b/.test(value)) return "Future-Proof";
-  if (/\b(gta|culture|viral|creator|banks|stream|twitter|x|timeline|attention)\b/.test(value)) return "Culture Shock";
-  return "The Price Is Wrong";
+  const scored = appConfig.segments
+    .map((segment) => {
+      const keywords = normalizeKeywordList(segment.keywords);
+      const score = keywords.reduce((total, keyword) => {
+        const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const pattern = keyword.length <= 3
+          ? new RegExp(`(^|\\W)${escaped}(\\W|$)`, "i")
+          : new RegExp(escaped, "i");
+        return total + (pattern.test(value) ? 1 : 0);
+      }, 0);
+      return { segment, score };
+    })
+    .sort((a, b) => b.score - a.score);
+  if (scored[0]?.score > 0) return scored[0].segment.name;
+  return normalizeSegmentName("The Price Is Wrong", appConfig.segments[0]?.name || "");
+}
+
+function remapSegmentName(value, previousSegments, nextSegments, text = "", terms = []) {
+  const requested = String(value || "").trim().toLowerCase();
+  const exact = nextSegments.find((segment) => segment.name.toLowerCase() === requested);
+  if (exact) return exact.name;
+  const previousIndex = previousSegments.findIndex((segment) => segment.name.toLowerCase() === requested);
+  if (previousIndex >= 0 && nextSegments[previousIndex]) return nextSegments[previousIndex].name;
+  return normalizeSegmentName(segmentForText(text, terms), nextSegments[0]?.name || "");
+}
+
+function applySegments(segments) {
+  const previousSegments = cloneSegments(appConfig.segments);
+  const nextSegments = sanitizeSegments(segments);
+  appConfig.segments = nextSegments;
+  state.showState = {
+    currentSegment: remapSegmentName(state.showState.currentSegment, previousSegments, nextSegments),
+    updatedAt: new Date().toISOString(),
+  };
+  state.history = state.history.map((message) => {
+    const segment = remapSegmentName(message.segment, previousSegments, nextSegments, message.text, message.matchedTerms || []);
+    return {
+      ...message,
+      segment,
+      operator: message.operator ? { ...message.operator, segment } : message.operator,
+    };
+  });
+  state.producerQueue = state.producerQueue.map((item) => ({
+    ...item,
+    segment: remapSegmentName(item.segment, previousSegments, nextSegments, item.text, item.matchedTerms || []),
+    topicSegment: remapSegmentName(item.topicSegment, previousSegments, nextSegments, item.text, item.matchedTerms || []),
+  }));
 }
 
 const state = {
@@ -238,6 +327,7 @@ function schedulePersist() {
       const payload = {
         version: 2,
         savedAt: new Date().toISOString(),
+        segments: appConfig.segments,
         history: state.history.slice(-HISTORY_LIMIT),
         producerQueue: state.producerQueue.slice(0, 80),
         showState: state.showState,
@@ -255,7 +345,19 @@ function loadRuntimeState() {
   try {
     if (!fs.existsSync(STATE_FILE)) return;
     const payload = JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
-    state.history = Array.isArray(payload.history) ? payload.history.slice(-HISTORY_LIMIT) : [];
+    if (Array.isArray(payload.segments)) {
+      appConfig.segments = sanitizeSegments(payload.segments);
+    }
+    state.history = Array.isArray(payload.history)
+      ? payload.history.slice(-HISTORY_LIMIT).map((message) => {
+        const segment = normalizeSegmentName(message.segment || segmentForText(message.text, message.matchedTerms || []));
+        return {
+          ...message,
+          segment,
+          operator: message.operator ? { ...message.operator, segment } : message.operator,
+        };
+      })
+      : [];
     state.producerQueue = Array.isArray(payload.producerQueue)
       ? payload.producerQueue.slice(0, 80).map((item) => ({
         ...item,
@@ -446,7 +548,7 @@ function pushMessage(input) {
 
   const intent = input.intent || classifyMessage(input.text);
   const signal = scoreMessage({ source, text: input.text, intent });
-  const segment = input.segment || signal.segment;
+  const segment = normalizeSegmentName(input.segment, signal.segment);
   const message = {
     id,
     source,
@@ -481,7 +583,8 @@ function pushMessage(input) {
 
 function queueProducerItem(message, kind, segmentOverride) {
   const safeKind = ["question", "signal", "clip"].includes(kind) ? kind : "signal";
-  const topicSegment = normalizeSegmentName(message.topicSegment || message.segment || segmentForText(message.text, message.matchedTerms || []));
+  const inferredSegment = segmentForText(message.text, message.matchedTerms || []);
+  const topicSegment = normalizeSegmentName(message.topicSegment || message.segment, inferredSegment);
   const segment = normalizeSegmentName(segmentOverride || state.showState.currentSegment || topicSegment, topicSegment);
   const queueId = hashId(["queue", safeKind, message.id]);
   const existingIndex = state.producerQueue.findIndex((item) => item.id === queueId);
@@ -825,6 +928,22 @@ async function handleApi(req, res, pathname) {
     };
     broadcast("show-state", publicState());
     jsonResponse(res, 200, { ok: true, showState: state.showState });
+    schedulePersist();
+    return;
+  }
+  if (req.method === "POST" && pathname === "/api/segments/update") {
+    const body = await readRequestBody(req);
+    const nextSegments = sanitizeSegments(body.segments);
+    applySegments(nextSegments);
+    broadcast("show-state", publicState());
+    jsonResponse(res, 200, { ok: true, config: appConfig, showState: state.showState, producerQueue: state.producerQueue });
+    schedulePersist();
+    return;
+  }
+  if (req.method === "POST" && pathname === "/api/segments/reset") {
+    applySegments(DEFAULT_SEGMENTS);
+    broadcast("show-state", publicState());
+    jsonResponse(res, 200, { ok: true, config: appConfig, showState: state.showState, producerQueue: state.producerQueue });
     schedulePersist();
     return;
   }

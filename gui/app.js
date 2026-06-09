@@ -18,6 +18,8 @@ const state = {
   visibleCount: 0,
   focusTerm: "",
   radar: [],
+  segmentEditorOpen: false,
+  segmentDraft: null,
 };
 
 const sourceNames = {
@@ -118,6 +120,25 @@ function messageMatchesTerm(message, term) {
 
 function segmentNames() {
   return (state.config.segments || []).map((segment) => segment.name).filter(Boolean);
+}
+
+function segmentKeywords(segment) {
+  return Array.isArray(segment?.keywords)
+    ? segment.keywords.map((item) => String(item || "").trim()).filter(Boolean)
+    : String(segment?.keywords || "").split(",").map((item) => item.trim()).filter(Boolean);
+}
+
+function cloneSegmentConfig(segments = state.config.segments || []) {
+  return segments.map((segment) => ({
+    name: String(segment.name || "").trim(),
+    brief: String(segment.brief || "").trim(),
+    keywords: segmentKeywords(segment),
+  }));
+}
+
+function segmentConfigByName(name) {
+  const requested = String(name || "").trim().toLowerCase();
+  return (state.config.segments || []).find((segment) => String(segment.name || "").toLowerCase() === requested) || null;
 }
 
 function normalizeSegment(value, fallback = "") {
@@ -519,6 +540,88 @@ function renderPreviousEpisodes() {
     .join("");
 }
 
+function syncSegmentDraftFromForm() {
+  const rows = [...document.querySelectorAll(".segmentEditRow")];
+  if (!rows.length) return;
+  state.segmentDraft = rows.map((row) => ({
+    name: row.querySelector("[data-segment-field='name']")?.value.trim() || "",
+    brief: row.querySelector("[data-segment-field='brief']")?.value.trim() || "",
+    keywords: (row.querySelector("[data-segment-field='keywords']")?.value || "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean),
+  }));
+}
+
+function sanitizedSegmentDraft() {
+  const seen = new Set();
+  return (state.segmentDraft || [])
+    .map((segment) => ({
+      name: String(segment.name || "").trim().replace(/\s+/g, " "),
+      brief: String(segment.brief || "").trim().replace(/\s+/g, " "),
+      keywords: segmentKeywords(segment),
+    }))
+    .filter((segment) => {
+      if (!segment.name) return false;
+      const key = segment.name.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 8);
+}
+
+function renderSegmentEditorRows() {
+  const rows = $("segmentEditorRows");
+  if (!rows) return;
+  const draft = state.segmentDraft || cloneSegmentConfig();
+  rows.innerHTML = draft
+    .map((segment, index) => `
+      <div class="segmentEditRow" data-index="${index}">
+        <label>
+          <span>Name</span>
+          <input data-segment-field="name" type="text" maxlength="40" value="${escapeHtml(segment.name)}" placeholder="Segment name" />
+        </label>
+        <label>
+          <span>Brief</span>
+          <input data-segment-field="brief" type="text" maxlength="140" value="${escapeHtml(segment.brief)}" placeholder="What belongs here?" />
+        </label>
+        <label>
+          <span>Keywords</span>
+          <input data-segment-field="keywords" type="text" value="${escapeHtml(segmentKeywords(segment).join(", "))}" placeholder="BTC, AI, sports, culture" />
+        </label>
+        <button class="queueRemove" type="button" data-segment-action="remove" aria-label="Remove segment"></button>
+      </div>
+    `)
+    .join("");
+  $("addSegmentBtn").disabled = draft.length >= 8;
+}
+
+function renderSegmentSetup() {
+  const list = $("todaySegmentsList");
+  const editor = $("segmentEditor");
+  if (!list || !editor) return;
+  const activeSegment = currentSegmentName();
+  const segments = state.config.segments || [];
+  list.innerHTML = segments.length
+    ? segments.map((segment, index) => `
+      <div class="todaySegment${segment.name === activeSegment ? " active" : ""}">
+        <span>${index + 1}</span>
+        <div>
+          <strong>${escapeHtml(segment.name)}</strong>
+          <small>${escapeHtml(segment.brief || "No brief yet")}</small>
+          ${segmentKeywords(segment).length ? `<em>${segmentKeywords(segment).slice(0, 6).map(escapeHtml).join(" · ")}</em>` : ""}
+        </div>
+      </div>
+    `).join("")
+    : `<div class="emptyState compact">No segments configured.</div>`;
+  editor.hidden = !state.segmentEditorOpen;
+  if (state.segmentEditorOpen) {
+    if (!state.segmentDraft) state.segmentDraft = cloneSegmentConfig();
+    renderSegmentEditorRows();
+  }
+}
+
 function renderConfig() {
   const config = state.config || {};
   const name = config.workspaceName || "Market Bubble Live Desk";
@@ -569,6 +672,7 @@ function renderConfig() {
   $("watchlist").innerHTML = (config.watchlist || [])
     .map((item) => `<span class="watchChip">${escapeHtml(item)}</span>`)
     .join("");
+  renderSegmentSetup();
   renderEpisodeBrief();
   renderWorkflowFit();
   renderPreviousEpisodes();
@@ -576,11 +680,20 @@ function renderConfig() {
 
 function segmentForTerm(term, sample) {
   const value = `${term || ""} ${sample?.text || ""}`.toLowerCase();
-  if (/\b(nba|nfl|mlb|ufc|sports|spread|line|game|match|baseball|bullpen)\b/.test(value)) return "Pick n' Roll";
-  if (/\b(60k|liquidation|liquidations|funding|open interest|oi|support|resistance|wick|breakdown|breakout|mispriced|probability|odds|polymarket|zcash|zec|bitcoin|btc)\b/.test(value)) return "The Price Is Wrong";
-  if (/\b(ai|agents|compute|near|eth|solana|sol|hyperliquid|hype|crypto|ethereum|frontier)\b/.test(value)) return "Future-Proof";
-  if (/\b(gta|culture|viral|creator|banks|stream|twitter|x|timeline|attention)\b/.test(value)) return "Culture Shock";
-  return "The Price Is Wrong";
+  const scored = (state.config.segments || [])
+    .map((segment) => {
+      const score = segmentKeywords(segment).reduce((total, keyword) => {
+        const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const pattern = keyword.length <= 3
+          ? new RegExp(`(^|\\W)${escaped}(\\W|$)`, "i")
+          : new RegExp(escaped, "i");
+        return total + (pattern.test(value) ? 1 : 0);
+      }, 0);
+      return { segment, score };
+    })
+    .sort((a, b) => b.score - a.score);
+  if (scored[0]?.score > 0) return scored[0].segment.name;
+  return normalizeSegment("The Price Is Wrong", segmentNames()[0] || "");
 }
 
 function segmentForMessage(message) {
@@ -601,9 +714,11 @@ function topicSegmentForMessage(message) {
 
 function suggestedPrompt(term, item) {
   const segment = item?.segment || segmentForTerm(term, item?.sample);
+  const segmentConfig = segmentConfigByName(segment);
   if (segment === "Culture Shock") return `Ask whether ${term} is a real attention market or just timeline noise.`;
   if (segment === "Pick n' Roll") return `Ask what number would make ${term} mispriced enough to take seriously.`;
   if (segment === "Future-Proof") return `Ask how ${term} changes the long-term market structure or trade setup.`;
+  if (segmentConfig) return `Ask how ${term} fits ${segment}, and what the operator should do with it now.`;
   return `Ask where the market is wrong on ${term}, and what would move the odds.`;
 }
 
@@ -1377,6 +1492,106 @@ function bindControls() {
     $("copyEpisodeBriefBtn").textContent = "Copied";
     setTimeout(() => {
       $("copyEpisodeBriefBtn").textContent = "Copy Episode Brief";
+    }, 900);
+  });
+
+  $("editSegmentsBtn").addEventListener("click", () => {
+    state.segmentEditorOpen = true;
+    state.segmentDraft = cloneSegmentConfig();
+    renderSegmentSetup();
+  });
+
+  $("cancelSegmentsBtn").addEventListener("click", () => {
+    state.segmentEditorOpen = false;
+    state.segmentDraft = null;
+    renderSegmentSetup();
+  });
+
+  $("addSegmentBtn").addEventListener("click", () => {
+    syncSegmentDraftFromForm();
+    const draft = state.segmentDraft || [];
+    if (draft.length >= 8) return;
+    draft.push({
+      name: `Segment ${draft.length + 1}`,
+      brief: "What this segment is for.",
+      keywords: [],
+    });
+    state.segmentDraft = draft;
+    renderSegmentEditorRows();
+  });
+
+  $("resetSegmentsBtn").addEventListener("click", async () => {
+    const button = $("resetSegmentsBtn");
+    button.disabled = true;
+    button.textContent = "Resetting";
+    try {
+      const payload = await postJson("/api/segments/reset");
+      state.config = payload.config || state.config;
+      state.showState = payload.showState || state.showState;
+      state.producerQueue = payload.producerQueue || state.producerQueue;
+      state.segmentEditorOpen = false;
+      state.segmentDraft = null;
+      renderConfig();
+      renderRadar();
+      renderFeed();
+      renderProducerQueue();
+      updateMetrics();
+    } catch (error) {
+      button.textContent = "Failed";
+    }
+    setTimeout(() => {
+      button.disabled = false;
+      button.textContent = "Reset Defaults";
+    }, 900);
+  });
+
+  $("segmentEditorRows").addEventListener("input", syncSegmentDraftFromForm);
+
+  $("segmentEditorRows").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-segment-action='remove']");
+    if (!button) return;
+    syncSegmentDraftFromForm();
+    const index = Number(button.closest(".segmentEditRow")?.dataset.index || -1);
+    const draft = state.segmentDraft || [];
+    if (draft.length <= 1 || index < 0) return;
+    draft.splice(index, 1);
+    state.segmentDraft = draft;
+    renderSegmentEditorRows();
+  });
+
+  $("segmentEditor").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    syncSegmentDraftFromForm();
+    const segments = sanitizedSegmentDraft();
+    const button = $("saveSegmentsBtn");
+    if (!segments.length) {
+      button.textContent = "Need 1+";
+      setTimeout(() => {
+        button.textContent = "Save Segments";
+      }, 900);
+      return;
+    }
+    button.disabled = true;
+    button.textContent = "Saving";
+    try {
+      const payload = await postJson("/api/segments/update", { segments });
+      state.config = payload.config || state.config;
+      state.showState = payload.showState || state.showState;
+      state.producerQueue = payload.producerQueue || state.producerQueue;
+      state.segmentEditorOpen = false;
+      state.segmentDraft = null;
+      renderConfig();
+      renderRadar();
+      renderFeed();
+      renderProducerQueue();
+      updateMetrics();
+      button.textContent = "Saved";
+    } catch (error) {
+      button.textContent = "Failed";
+    }
+    setTimeout(() => {
+      button.disabled = false;
+      button.textContent = "Save Segments";
     }, 900);
   });
 

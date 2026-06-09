@@ -1664,6 +1664,164 @@ h2 {
   margin-top: 10px;
 }
 
+.todaySegments {
+  margin-top: 8px;
+  border: 1px solid rgba(242, 198, 112, 0.16);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.18);
+  padding: 12px;
+}
+
+.todaySegmentsTop {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.todaySegmentsTop strong {
+  display: block;
+  color: var(--gold-bright);
+  font-size: 13px;
+}
+
+.todaySegmentsTop span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.todaySegmentsList {
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.todaySegment {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
+  border: 1px solid rgba(255, 255, 255, 0.085);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 9px;
+}
+
+.todaySegment.active {
+  border-color: rgba(83, 252, 24, 0.3);
+  background: rgba(83, 252, 24, 0.045);
+}
+
+.todaySegment > span {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(242, 198, 112, 0.22);
+  border-radius: 8px;
+  color: var(--gold-bright);
+  background: rgba(242, 198, 112, 0.055);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.todaySegment strong,
+.todaySegment small,
+.todaySegment em {
+  display: block;
+  min-width: 0;
+}
+
+.todaySegment strong {
+  color: var(--gold-bright);
+  font-size: 13px;
+}
+
+.todaySegment small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.todaySegment em {
+  margin-top: 5px;
+  color: #b7eaff;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.segmentEditor {
+  display: grid;
+  gap: 9px;
+  margin-top: 10px;
+}
+
+.segmentEditor[hidden] {
+  display: none;
+}
+
+.segmentEditorRows {
+  display: grid;
+  gap: 9px;
+}
+
+.segmentEditRow {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.2fr) minmax(0, 1fr) 28px;
+  gap: 7px;
+  align-items: end;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 9px;
+}
+
+.segmentEditRow label {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.segmentEditRow label span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.segmentEditRow input {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--text);
+  padding: 0 10px;
+  font: inherit;
+  font-size: 13px;
+}
+
+.segmentEditRow input:focus {
+  outline: none;
+  border-color: var(--line-strong);
+  background: rgba(242, 198, 112, 0.055);
+}
+
+.segmentEditorActions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.segmentEditorActions .miniButton,
+.segmentEditorActions .primaryButton {
+  width: 100%;
+}
+
 .notesBlock summary,
 .demoBlock > summary,
 .sourcePanel > summary {
@@ -2018,6 +2176,14 @@ h2 {
   .feed {
     height: 56vh;
   }
+
+  .segmentEditRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .segmentEditRow .queueRemove {
+    justify-self: end;
+  }
 }
 
 @media (max-width: 760px) {
@@ -2067,6 +2233,15 @@ h2 {
   .decisionFilter {
     flex: 0 0 112px;
     min-height: 62px;
+  }
+
+  .todaySegmentsTop,
+  .segmentEditorActions {
+    grid-template-columns: 1fr;
+  }
+
+  .todaySegmentsTop .miniButton {
+    width: 100%;
   }
 
   .messageRow {
