@@ -33,7 +33,7 @@
               <span id="buildCopy">Twitch + X + Kick into one source-labeled live feed for the room.</span>
             </div>
             <div class="deskStats" aria-label="Desk metrics">
-              <div class="deskStat"><span>Live</span><strong id="visibleCount">0</strong></div>
+              <div class="deskStat"><span>Visible</span><strong id="visibleCount">0</strong></div>
               <div class="deskStat"><span>Queued</span><strong id="queuedCount">0</strong></div>
               <div class="deskStat"><span>Done</span><strong id="doneCount">0</strong></div>
             </div>
@@ -107,12 +107,12 @@
             </div>
             <div id="nextMove" class="nextMove"></div>
             <div class="assistStats" aria-label="Current segment status">
-              <div><span>Now</span><strong id="assistNowCount">0</strong></div>
-              <div><span>Parked</span><strong id="assistParkedCount">0</strong></div>
-              <div><span>Heat</span><strong id="assistHeatCount">0</strong></div>
+              <div><span>Use now</span><strong id="assistNowCount">0</strong><small>Ready for this segment</small></div>
+              <div><span>Bring back</span><strong id="assistParkedCount">0</strong><small>Relevant but parked</small></div>
+              <div><span>Heat</span><strong id="assistHeatCount">0</strong><small>Recent watchlist hits</small></div>
             </div>
             <div class="assistActions">
-              <button id="triageModeBtn" class="miniButton" type="button">Triage Mode</button>
+              <button id="triageModeBtn" class="miniButton" type="button">Show Use Now</button>
               <button id="copySegmentBriefBtn" class="primaryButton" type="button">Copy Segment Brief</button>
             </div>
           </section>
@@ -198,6 +198,7 @@
           <span class="messageChannel"></span>
           <span class="intentPill"></span>
           <span class="priorityPill"></span>
+          <span class="modePill"></span>
           <span class="segmentPill"></span>
           <span class="matchTerms"></span>
         </div>

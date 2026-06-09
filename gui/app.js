@@ -93,6 +93,19 @@ function priorityLabel(priority) {
   }[priority || "normal"] || "";
 }
 
+function isDemoMessage(message) {
+  const meta = message?.meta || {};
+  return Boolean(meta.demoPulse || meta.episodeAware || message?.channel === "demo");
+}
+
+function sourceModeLabel(status) {
+  if (status === "connected") return "Live";
+  if (status === "demo") return "Demo";
+  if (status === "reconnecting") return "Retrying";
+  if (status === "error") return "Error";
+  return "Idle";
+}
+
 function messageTimeMs(message) {
   const value = new Date(message.receivedAt || message.createdAt || 0).getTime();
   return Number.isFinite(value) ? value : 0;
@@ -158,12 +171,12 @@ function decisionForMessage(message) {
     return { status: "use", label: "Use Now", reason: operatorReason(message), kind: message?.operator?.kind || smartKindForMessage(message) };
   }
   if (base === "queue") {
-    return { status: "park", label: "Park", reason: `For ${segment}`, kind: message?.operator?.kind || smartKindForMessage(message) };
+    return { status: "park", label: "Rest", reason: `For ${segment}`, kind: message?.operator?.kind || smartKindForMessage(message) };
   }
   if (base === "watch") {
-    return { status: "watch", label: "Watch", reason: operatorReason(message), kind: message?.operator?.kind || smartKindForMessage(message) };
+    return { status: "watch", label: "Rest", reason: operatorReason(message), kind: message?.operator?.kind || smartKindForMessage(message) };
   }
-  return { status: "noise", label: "Noise", reason: message?.operator?.reason || "Low actionability", kind: message?.operator?.kind || smartKindForMessage(message) };
+  return { status: "noise", label: "Rest", reason: message?.operator?.reason || "Low actionability", kind: message?.operator?.kind || smartKindForMessage(message) };
 }
 
 function passesBaseFilters(message) {
@@ -185,6 +198,7 @@ function passesBaseFilters(message) {
 
 function passesFilters(message) {
   if (!passesBaseFilters(message)) return false;
+  if (state.decisionFilter === "rest") return decisionForMessage(message).status !== "use";
   if (state.decisionFilter !== "all" && decisionForMessage(message).status !== state.decisionFilter) return false;
   return true;
 }
@@ -199,6 +213,71 @@ function operatorCueForMessage(message) {
   return `${segment} watch item${terms ? ` · ${terms}` : ""}`;
 }
 
+function operatorOutcomeForMessage(message, decision = decisionForMessage(message)) {
+  const kind = decision.kind || smartKindForMessage(message);
+  const segment = segmentForMessage(message);
+  const current = currentSegmentName();
+  const text = String(message?.text || "");
+  const terms = Array.isArray(message?.matchedTerms) ? message.matchedTerms.filter(Boolean) : [];
+  const leadTerm = terms[0] || "";
+  const isSegue = segment !== current || /\b(segway|segue|transition|next segment|bring up|talk about|move into)\b/i.test(text);
+
+  if (decision.status === "park") {
+    return {
+      label: "Bring back later",
+      detail: `Fits ${segment}; keep it parked while ${current} is live.`,
+    };
+  }
+  if (decision.status === "watch") {
+    return {
+      label: "Watch for heat",
+      detail: "Let it build; act only if the topic repeats or gains a stronger source.",
+    };
+  }
+  if (decision.status === "noise") {
+    return {
+      label: "Low priority",
+      detail: "Let it pass unless the same topic starts repeating.",
+    };
+  }
+  if (kind === "question") {
+    if (isSegue) {
+      return {
+        label: "Segment segue",
+        detail: `Use it as a clean handoff into ${segment}.`,
+      };
+    }
+    return {
+      label: "On-air question",
+      detail: `Put it to the hosts in ${segment}.`,
+    };
+  }
+  if (kind === "clip") {
+    if (message.intent === "culture") {
+      return {
+        label: "Culture beat",
+        detail: "Use it as a timeline read, then mark the moment for social.",
+      };
+    }
+    return {
+      label: "Clip candidate",
+      detail: "Save the exchange for X, TikTok, or Shorts after the segment.",
+    };
+  }
+  if (kind === "signal") {
+    return {
+      label: "Market beat",
+      detail: leadTerm
+        ? `Turn ${leadTerm} into a quick host read or debate.`
+        : "Turn it into a quick host read or debate.",
+    };
+  }
+  return {
+    label: "Producer prompt",
+    detail: `Use it to steer ${segment} without derailing the segment.`,
+  };
+}
+
 function renderMessage(message, flash = false) {
   const template = $("messageTemplate").content.cloneNode(true);
   const row = template.querySelector(".messageRow");
@@ -209,6 +288,7 @@ function renderMessage(message, flash = false) {
   const channel = template.querySelector(".messageChannel");
   const intent = template.querySelector(".intentPill");
   const priority = template.querySelector(".priorityPill");
+  const mode = template.querySelector(".modePill");
   const segment = template.querySelector(".segmentPill");
   const matchTerms = template.querySelector(".matchTerms");
   const decisionBadge = template.querySelector(".decisionBadge");
@@ -237,11 +317,25 @@ function renderMessage(message, flash = false) {
   intent.classList.add(message.intent || "chat");
   priority.textContent = priorityLabel(message.priority);
   if (message.priority) priority.classList.add(message.priority);
+  if (isDemoMessage(message)) {
+    mode.textContent = "Demo";
+    mode.title = "Sample/rehearsal item, not a real audience message.";
+    mode.classList.add("demo");
+  } else {
+    mode.textContent = "Live";
+    mode.title = "Live or manually injected operator item.";
+    mode.classList.add("live");
+  }
   segment.textContent = segmentForMessage(message);
   matchTerms.textContent = (message.matchedTerms || []).join(", ");
   decisionBadge.textContent = decision.label;
   decisionBadge.classList.add(decision.status);
-  decisionReason.textContent = decision.reason;
+  decisionReason.classList.add(decision.status);
+  const outcome = operatorOutcomeForMessage(message, decision);
+  decisionReason.innerHTML = `
+    <strong>${decision.status === "use" ? `Potential: ${escapeHtml(outcome.label)}` : escapeHtml(outcome.label)}</strong>
+    <span>${escapeHtml(outcome.detail)}${decision.reason ? ` · ${escapeHtml(decision.reason)}` : ""}</span>
+  `;
   text.textContent = escapeText(message.text);
   cue.textContent = operatorCueForMessage(message);
   time.textContent = formatTime(message.createdAt || message.receivedAt);
@@ -312,18 +406,18 @@ function renderDecisionBar() {
     acc[status] = (acc[status] || 0) + 1;
     return acc;
   }, { use: 0, watch: 0, park: 0, noise: 0 });
+  const restCount = counts.watch + counts.park + counts.noise;
   const items = [
-    ["all", "All", scoped.length],
-    ["use", "Use Now", counts.use],
-    ["watch", "Watch", counts.watch],
-    ["park", "Park", counts.park],
-    ["noise", "Noise", counts.noise],
+    ["use", "Use Now", counts.use, "Ask, clip, segue, or host read"],
+    ["rest", "Rest", restCount, "Watch, park, or ignore"],
+    ["all", "All", scoped.length, "Everything visible"],
   ];
   node.innerHTML = `
-    <span class="decisionBarLabel">Operator read</span>
-    ${items.map(([status, label, count]) => `
+    <span class="decisionBarLabel"><strong>Operator read</strong><small>Use Now first. Rest can wait.</small></span>
+    ${items.map(([status, label, count, description]) => `
       <button class="decisionFilter${state.decisionFilter === status ? " active" : ""} ${status}" type="button" data-decision="${status}">
         <span>${label}</span>
+        <small>${description}</small>
         <strong>${count}</strong>
       </button>
     `).join("")}
@@ -337,16 +431,19 @@ function renderSources() {
     .map((source) => {
       const item = sources[source] || {};
       const status = item.status || "idle";
-      const detail = item.detail || "Not configured.";
+      const modeLabel = sourceModeLabel(status);
+      const detail = status === "demo"
+        ? "Sample/rehearsal feed. Configure credentials/channels to ingest real audience messages."
+        : item.detail || "Not configured.";
       const lastAge = relativeAge(item.lastMessageAt);
       const isStale = item.lastMessageAt && Date.now() - new Date(item.lastMessageAt).getTime() > 120000;
       return `
-        <div class="statusItem ${source}${isStale ? " stale" : ""}">
+        <div class="statusItem ${source} status-${status}${isStale ? " stale" : ""}">
           <div class="statusTop">
             <span class="statusName">${sourceNames[source]}</span>
-            <span class="statusPill">${status}</span>
+            <span class="statusPill">${modeLabel}</span>
           </div>
-          <div class="statusDetail">${detail}</div>
+          <div class="statusDetail">${escapeHtml(detail)}</div>
           <div class="statusMeta">Last item: ${escapeHtml(lastAge)}</div>
         </div>
       `;
@@ -591,6 +688,56 @@ function queueKindCounts(items) {
   }, {});
 }
 
+function assistActionType(label = "") {
+  const value = String(label || "").toLowerCase();
+  if (value.includes("ask")) return "question";
+  if (value.includes("market") || value.includes("signal")) return "signal";
+  if (value.includes("clip")) return "clip";
+  if (value.includes("queue")) return "queue";
+  if (value.includes("park")) return "park";
+  return "watch";
+}
+
+function assistMixSummary(counts) {
+  const parts = [
+    [counts.question || 0, "ask"],
+    [counts.signal || 0, "signal"],
+    [counts.clip || 0, "clip"],
+  ].filter(([count]) => count > 0);
+  return parts.length ? parts.map(([count, label]) => `${count} ${label}`).join(" / ") : "No queued asks, signals, or clips yet";
+}
+
+function moveFromMessage(label, body, detail, message, status = "use") {
+  const kind = message?.kind || message?.operator?.kind || smartKindForMessage(message);
+  const outcome = operatorOutcomeForMessage(message, { status, label: status === "use" ? "Use Now" : "Rest", reason: detail, kind });
+  return {
+    label,
+    body,
+    detail,
+    actionType: kind,
+    outcomeLabel: outcome.label,
+    outcomeDetail: outcome.detail,
+  };
+}
+
+function assistOutcomeForMove(move) {
+  if (move.outcomeLabel) {
+    return {
+      label: move.outcomeLabel,
+      detail: move.outcomeDetail || move.detail,
+    };
+  }
+  const actionType = move.actionType || assistActionType(move.label);
+  return {
+    question: { label: "On-air question", detail: "Put it directly to the hosts or guest." },
+    signal: { label: "Market beat", detail: "Turn it into a quick host read or debate." },
+    clip: { label: "Clip candidate", detail: "Save it for X, TikTok, or Shorts after the segment." },
+    queue: { label: "Producer prompt", detail: "Queue it so the hosts can use it cleanly." },
+    park: { label: "Bring back later", detail: "Hold it until the right segment is live." },
+    watch: { label: "Watch item", detail: "Let it build before taking it on air." },
+  }[actionType] || { label: "Producer prompt", detail: "Use it only if it helps the current segment." };
+}
+
 function sourceSummary() {
   return ["kick", "x", "twitch"]
     .map((source) => {
@@ -626,40 +773,47 @@ function producerNextMove() {
   const radar = topRadarForSegment();
 
   if (topQuestion) {
-    return {
-      label: "Ask this next",
-      body: `${topQuestion.displayName || "unknown"}: ${topQuestion.text}`,
-      detail: `${activeSegment} question already queued.`,
-    };
+    return moveFromMessage(
+      "Ask this next",
+      `${topQuestion.displayName || "unknown"}: ${topQuestion.text}`,
+      `${activeSegment} question already queued.`,
+      topQuestion
+    );
   }
   if (topSignal) {
-    return {
-      label: "Bring this market beat up",
-      body: `${topSignal.displayName || "unknown"}: ${topSignal.text}`,
-      detail: `${activeSegment} signal is ready for host handoff.`,
-    };
+    return moveFromMessage(
+      "Bring this market beat up",
+      `${topSignal.displayName || "unknown"}: ${topSignal.text}`,
+      `${activeSegment} signal is ready for host handoff.`,
+      topSignal
+    );
   }
   if (topClip) {
-    return {
-      label: "Mark this for clipping",
-      body: `${topClip.displayName || "unknown"}: ${topClip.text}`,
-      detail: `${activeSegment} clip candidate is waiting.`,
-    };
+    return moveFromMessage(
+      "Mark this for clipping",
+      `${topClip.displayName || "unknown"}: ${topClip.text}`,
+      `${activeSegment} clip candidate is waiting.`,
+      topClip
+    );
   }
   const feedCandidate = topActionableFeedMessage();
   if (feedCandidate) {
     const decision = decisionForMessage(feedCandidate);
-    return {
-      label: "Queue this from the feed",
-      body: `${feedCandidate.displayName || "unknown"}: ${feedCandidate.text}`,
-      detail: `${decision.reason}. Suggested route: ${queueKindLabel(decision.kind)}.`,
-    };
+    return moveFromMessage(
+      "Queue this from the feed",
+      `${feedCandidate.displayName || "unknown"}: ${feedCandidate.text}`,
+      `${decision.reason}. Suggested route: ${queueKindLabel(decision.kind)}.`,
+      feedCandidate
+    );
   }
   if (radar && radar.inCurrentSegment) {
     return {
-      label: `Watch ${radar.term}`,
+      label: `Use ${radar.term} as a prompt`,
       body: suggestedPrompt(radar.term, radar),
       detail: `${radar.count} recent mentions across ${formatSources(radar.sourceCounts)}.`,
+      actionType: "signal",
+      outcomeLabel: "Segment prompt",
+      outcomeDetail: `Use ${radar.term} to open a short host read in ${activeSegment}.`,
     };
   }
   if (radar) {
@@ -667,12 +821,18 @@ function producerNextMove() {
       label: `Park ${radar.term}`,
       body: suggestedPrompt(radar.term, radar),
       detail: `Topic fits ${radar.segment}; current segment is ${activeSegment}.`,
+      actionType: "park",
+      outcomeLabel: "Bring back later",
+      outcomeDetail: `Hold ${radar.term} for ${radar.segment}.`,
     };
   }
   return {
     label: "Keep monitoring",
     body: "No clear segment signal yet. Stay in all-feed mode until radar or queue pressure builds.",
     detail: "Sources are connected when the status cards show live or demo.",
+    actionType: "watch",
+    outcomeLabel: "Monitor only",
+    outcomeDetail: "Nothing deserves airtime yet; keep the room focused.",
   };
 }
 
@@ -687,15 +847,40 @@ function renderProducerAssist() {
     .reduce((total, item) => total + item.count, 0);
   const counts = queueKindCounts(nowItems);
   const move = producerNextMove();
+  const actionType = move.actionType || assistActionType(move.label);
+  const outcome = assistOutcomeForMove(move);
+  const mixSummary = assistMixSummary(counts);
+  const topRadar = topRadarForSegment();
 
-  $("assistSubhead").textContent = `${activeSegment} · ${openItems.length} open`;
+  $("assistSubhead").innerHTML = `
+    <span>Current segment</span>
+    <strong>${escapeHtml(activeSegment)}</strong>
+    <em>${openItems.length} open across the desk</em>
+  `;
   $("assistNowCount").textContent = nowItems.length;
   $("assistParkedCount").textContent = parkedTopicFit.length;
   $("assistHeatCount").textContent = heatCount;
   $("nextMove").innerHTML = `
-    <div class="nextMoveLabel">${escapeHtml(move.label)}</div>
+    <div class="nextMoveTop">
+      <span class="nextMoveLabel">Use Now</span>
+      <span class="assistType ${actionType}">${escapeHtml(outcome.label)}</span>
+    </div>
+    <h3>${escapeHtml(move.label)}</h3>
     <p>${escapeHtml(move.body)}</p>
-    <div class="nextMoveMeta">${escapeHtml(move.detail)}${nowItems.length ? ` · ${counts.question || 0} ask / ${counts.signal || 0} signal / ${counts.clip || 0} clip` : ""}</div>
+    <div class="assistReadGrid">
+      <div class="assistWhy">
+        <span>Can become</span>
+        <strong>${escapeHtml(outcome.detail)}</strong>
+      </div>
+      <div class="assistWhy">
+        <span>Why now</span>
+        <strong>${escapeHtml(move.detail)}</strong>
+      </div>
+    </div>
+    <div class="assistQueueRead">
+      <span>${escapeHtml(mixSummary)}</span>
+      ${topRadar ? `<em>Radar: ${escapeHtml(topRadar.term)} · ${topRadar.count} hits</em>` : "<em>Radar: quiet</em>"}
+    </div>
   `;
 }
 
@@ -745,7 +930,7 @@ function renderRadar() {
 function queueKindLabel(kind) {
   return {
     question: "On-air question",
-    signal: "Market signal",
+    signal: "Market beat",
     clip: "Clip candidate",
   }[kind] || "Queued";
 }
@@ -827,14 +1012,20 @@ function updateMetrics(payload) {
 function updateConnectionLight() {
   const light = $("connectionLight");
   const pending = state.queue.length;
-  const liveSources = Object.values(state.sources || {}).filter((source) =>
-    ["connected", "demo"].includes(source.status)
-  ).length;
-  light.classList.toggle("live", liveSources > 0);
+  const sourceValues = Object.values(state.sources || {});
+  const connectedSources = sourceValues.filter((source) => source.status === "connected").length;
+  const demoSources = sourceValues.filter((source) => source.status === "demo").length;
+  const activeSources = connectedSources + demoSources;
+  light.classList.toggle("live", connectedSources > 0);
+  light.classList.toggle("demo", connectedSources === 0 && demoSources > 0);
   if (state.paused) {
     light.textContent = pending ? `Paused · ${pending} queued` : "Paused";
-  } else if (liveSources > 0) {
+  } else if (connectedSources > 0) {
     light.textContent = "Live";
+  } else if (demoSources > 0) {
+    light.textContent = "Demo";
+  } else if (activeSources > 0) {
+    light.textContent = "Connected";
   } else {
     light.textContent = "Connecting";
   }
@@ -1060,6 +1251,7 @@ function formatSegmentBrief() {
   const parkedTopicFit = openItems.filter((item) => segmentForMessage(item) !== activeSegment && topicSegmentForMessage(item) === activeSegment);
   const radar = topRadarForSegment();
   const move = producerNextMove();
+  const outcome = assistOutcomeForMove(move);
   const counts = queueKindCounts(nowItems);
   const queueLines = nowItems.slice(0, 5).map((item, index) => `${index + 1}. ${formatQueueItem(item)}`);
   const parkedLines = parkedTopicFit.slice(0, 3).map((item, index) => `${index + 1}. ${formatQueueItem(item)}`);
@@ -1067,7 +1259,8 @@ function formatSegmentBrief() {
   return [
     "Market Bubble segment brief",
     `Current segment: ${activeSegment}`,
-    `Next move: ${move.label} — ${move.body}`,
+    `Next move: ${move.label} - ${move.body}`,
+    `Can become: ${outcome.label} - ${outcome.detail}`,
     `Why: ${move.detail}`,
     radar
       ? `Radar: ${radar.term} · ${radar.count} recent · ${radar.usable || 0} usable · ${radar.high} high-signal · ${radar.segment}`
