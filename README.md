@@ -6,6 +6,8 @@ Market Bubble is built around prediction-market discourse: digital culture, spor
 
 For the simplest business pitch, see [PRODUCT_BRIEF.md](PRODUCT_BRIEF.md). For a short recording script, see [LOOM_SCRIPT.md](LOOM_SCRIPT.md).
 
+![Market Bubble Live Desk desktop view](screenshot-desktop.png)
+
 ## Plain-English Version
 
 During a live show, useful audience signals are scattered everywhere.
@@ -36,8 +38,9 @@ The desk now centers the feed around three Market Bubble pillars:
 - Gives concrete, operator-ready messages priority over generic keyword hype.
 - Suppresses repeated text so the feed does not get stuck on one recycled line.
 - Lets the producer queue useful items for the hosts.
-- Shows topic heat in Signal Radar.
-- Gives a next best move in Producer Assist.
+- Opens on `Use Now` for the current segment, so the operator starts with the useful feed instead of the raw firehose.
+- Shows topic heat in `Topic Heat`.
+- Gives a next best move at the top of the screen and in the `Next Move` panel.
 - Creates copyable focus briefs and segment rundowns.
 - Includes previous-show context and latest-show rehearsal mode for demos.
 - Includes AWS Elastic Beanstalk deployment guidance for an always-live web version.
@@ -50,11 +53,12 @@ These are the biggest improvements from the latest passes:
 - Generic chatter like `HYPE just different` is treated as `Noise`.
 - Useful asks like `Ask Ansem what invalidates this trade` become `Use Now`.
 - Off-segment but useful messages become `Park`, so they are saved without distracting the current segment.
-- `Triage Mode` now focuses on `Use Now` items for the current segment.
-- Signal Radar ranks by usable items, not just mention count.
-- Producer Assist can suggest an unqueued feed item directly.
-- The top Operator Brief now gives a first-glance read on the live segment, Use Now items, topic heat, and host handoff.
-- `Pillar Lens` lets the operator filter the feed and queue around the three show pillars.
+- The `Show Use Now` control focuses on actionable items for the current segment.
+- `Topic Heat` ranks by usable items, not just mention count.
+- `Next Move` can suggest an unqueued feed item directly.
+- The new top strip tells the operator what to do next, what it can become, why it matters, and gives one-click actions for Use Now, host handoff, and copyable briefs.
+- The default view is now `Use Now` plus the current segment, with `Raw Feed` one click away.
+- `Why It Matters` lets the operator filter the feed and queue around the three show pillars.
 - The demo feed is now show-aware and less repetitive.
 - The repo includes `Procfile`, `.ebextensions`, `/healthz`, and AWS deployment docs.
 
@@ -85,15 +89,14 @@ Replace the Twitch/Kick channel names with the actual live channel slugs if they
 ## Producer Flow
 
 1. Open the desk before the show.
-2. Set `Segment Mode` to the current block.
-3. Watch `Producer Assist` for the next move.
-4. Use `Operator Read` to focus the feed:
-   - `Use Now` for items worth acting on.
-   - `Watch` for developing topics.
-   - `Park` for useful items that belong later.
-   - `Noise` for low-information chatter.
+2. Set `Current Segment` to the live block.
+3. Read the top `Do Next` strip first.
+4. Use `Feed Focus`:
+   - `Use Now` for items worth acting on in this segment.
+   - `Park / Watch` for useful later items or low-action items.
+   - `Raw Feed` when the operator needs the full source stream.
 5. Queue the best item as `Ask`, `Signal`, or `Clip`.
-6. Use `Signal Radar` when a topic starts heating up.
+6. Use `Topic Heat` when a topic starts building.
 7. Copy a `Focus Brief` or `Segment Brief` when the hosts need a clean handoff.
 8. Copy the `Rundown` at the end of a segment.
 9. Mark used items `Done`.

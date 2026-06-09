@@ -4,13 +4,13 @@ const state = {
   queue: [],
   filters: new Set(["kick", "x", "twitch"]),
   intentFilter: "all",
-  decisionFilter: "all",
+  decisionFilter: "use",
   pillarFilter: "all",
   queueFilter: "open",
   query: "",
   autoScroll: true,
   dense: false,
-  segmentLens: false,
+  segmentLens: true,
   metrics: { counts: {}, total: 0, clients: 0 },
   sources: {},
   producerQueue: [],
@@ -507,6 +507,7 @@ function renderFeed() {
   state.visibleCount = visible.length;
   renderDecisionBar();
   renderPillarRail();
+  renderOperatorCommand();
   feed.innerHTML = "";
   if (!visible.length) {
     const empty = document.createElement("div");
@@ -558,12 +559,12 @@ function renderDecisionBar() {
   }, { use: 0, watch: 0, park: 0, noise: 0 });
   const restCount = counts.watch + counts.park + counts.noise;
   const items = [
-    ["use", "Use Now", counts.use, "Ask, clip, segue, or host read"],
-    ["rest", "Rest", restCount, "Watch, park, or ignore"],
-    ["all", "All", scoped.length, "Everything visible"],
+    ["use", "Use Now", counts.use, "Best items for the live segment"],
+    ["rest", "Park / Watch", restCount, "Useful later or low action"],
+    ["all", "Raw Feed", scoped.length, "Every source item"],
   ];
   node.innerHTML = `
-    <span class="decisionBarLabel"><strong>Operator read</strong><small>Use Now first. Rest can wait.</small></span>
+    <span class="decisionBarLabel"><strong>Feed Focus</strong><small>Start with Use Now during the show.</small></span>
     ${items.map(([status, label, count, description]) => `
       <button class="decisionFilter${state.decisionFilter === status ? " active" : ""} ${status}" type="button" data-decision="${status}">
         <span>${label}</span>
@@ -807,7 +808,7 @@ function renderConfig() {
   const segmentControls = segments.length
     ? `
       <div class="segmentMode" aria-label="Segment mode">
-        <span class="toolbarLabel">Segment Mode</span>
+        <span class="toolbarLabel">Current Segment</span>
         <div class="segmentButtons" role="group" aria-label="Current show segment">
           ${segments
             .map((segment) => `
@@ -830,7 +831,7 @@ function renderConfig() {
     .join("");
   const pillarControls = `
     <div class="pillarMode" aria-label="Strategic pillar lens">
-      <span class="toolbarLabel">Pillar Lens</span>
+      <span class="toolbarLabel">Why It Matters</span>
       <div id="pillarButtons" class="pillarButtons" role="group" aria-label="Strategic pillars"></div>
     </div>
   `;
@@ -1013,6 +1014,8 @@ function moveFromMessage(label, body, detail, message, status = "use") {
     outcomeDetail: outcome.detail,
     pillarId: pillar?.id || "",
     pillarLabel: pillar?.label || "",
+    messageId: message?.messageId || message?.id || "",
+    queueItemId: message?.messageId ? message.id : "",
   };
 }
 
@@ -1161,7 +1164,7 @@ function renderProducerAssist() {
   $("assistHeatCount").textContent = heatCount;
   $("nextMove").innerHTML = `
     <div class="nextMoveTop">
-      <span class="nextMoveLabel">Use Now</span>
+      <span class="nextMoveLabel">Next</span>
       <span class="assistType ${actionType}">${escapeHtml(outcome.label)}</span>
       ${movePillar ? `<span class="assistType pillar ${escapeHtml(movePillar.id)}">${escapeHtml(movePillar.label)}</span>` : ""}
     </div>
@@ -1180,6 +1183,40 @@ function renderProducerAssist() {
     <div class="assistQueueRead">
       <span>${escapeHtml(mixSummary)}</span>
       ${topRadar ? `<em>Radar: ${escapeHtml(topRadar.term)} · ${topRadar.count} hits</em>` : "<em>Radar: quiet</em>"}
+    </div>
+  `;
+  renderOperatorCommand();
+}
+
+function renderOperatorCommand() {
+  const node = $("operatorCommand");
+  if (!node) return;
+  const activeSegment = currentSegmentName();
+  const move = producerNextMove();
+  const outcome = assistOutcomeForMove(move);
+  const actionType = move.actionType || assistActionType(move.label);
+  const pillarMessages = [
+    ...openQueueItems().filter((item) => segmentForMessage(item) === activeSegment),
+    ...state.messages.filter((message) => segmentForMessage(message) === activeSegment && decisionForMessage(message).status === "use"),
+  ];
+  const pillar = move.pillarId ? pillarById(move.pillarId) : pillarMessages.length ? dominantPillarForMessages(pillarMessages) : null;
+  const detail = move.detail || outcome.detail || "Keep the hosts focused on the best live signal.";
+  node.innerHTML = `
+    <div class="operatorCommandMain">
+      <span class="commandKicker">Do next</span>
+      <h2>${escapeHtml(move.label)}</h2>
+      <p>${escapeHtml(move.body)}</p>
+    </div>
+    <div class="operatorCommandMeta">
+      <span><b>Segment</b><strong>${escapeHtml(activeSegment || "Set segment")}</strong></span>
+      <span><b>Becomes</b><strong>${escapeHtml(outcome.label)}</strong></span>
+      ${pillar ? `<span class="commandPillar ${escapeHtml(pillar.id)}"><b>Pillar</b><strong>${escapeHtml(pillar.label)}</strong></span>` : ""}
+      <small>${escapeHtml(detail)}</small>
+    </div>
+    <div class="operatorCommandActions">
+      <button class="commandButton primary" type="button" data-command-action="use">Show Use Now</button>
+      <button class="commandButton" type="button" data-command-action="queue">Open Handoff</button>
+      <button class="commandButton" type="button" data-command-action="copy">Copy Brief</button>
     </div>
   `;
 }
@@ -1210,7 +1247,7 @@ function renderOperatorBrief() {
   const queueMix = assistMixSummary(counts);
   node.innerHTML = `
     <button class="briefCard segment" type="button" data-brief-action="segment">
-      <span>Live Segment</span>
+      <span>Now</span>
       <strong>${escapeHtml(activeSegment || "No segment")}</strong>
       <small>${activePillar ? `Pillar: ${escapeHtml(activePillar.label)} · ` : ""}${escapeHtml(segment?.brief || "Set today's rundown in Show Notes.")}</small>
     </button>
@@ -1220,7 +1257,7 @@ function renderOperatorBrief() {
       <small>${escapeHtml(move.label)} · ${escapeHtml(outcome.label)}${move.pillarLabel ? ` · ${escapeHtml(move.pillarLabel)}` : ""}</small>
     </button>
     <button class="briefCard heat" type="button" data-brief-action="radar"${radar ? ` data-term="${escapeHtml(radar.term)}"` : ""}>
-      <span>Heat</span>
+      <span>Heating Up</span>
       <strong>${escapeHtml(radar?.term || "Quiet")}</strong>
       <small>${escapeHtml(radarBody)}</small>
     </button>
@@ -1230,6 +1267,7 @@ function renderOperatorBrief() {
       <small>For hosts: ${escapeHtml(queueMix)}</small>
     </button>
   `;
+  renderOperatorCommand();
 }
 
 function renderRadar() {
@@ -1395,16 +1433,21 @@ function renderActiveFilterBar() {
   );
   const highCount = scopedMessages.filter((message) => message.priority === "high").length;
   const useNow = scopedMessages.filter((message) => decisionForMessage(message).status === "use").length;
+  const visibleCount = Number.isFinite(state.visibleCount) ? state.visibleCount : scopedMessages.length;
+  const decisionLabel = {
+    use: "Use Now",
+    rest: "Park / Watch",
+  }[state.decisionFilter] || state.decisionFilter;
   const parts = [
     currentSegmentName(),
-    `${state.visibleCount || scopedMessages.length} visible`,
+    `${visibleCount} visible`,
     `${useNow} use now`,
     `${highCount} high`,
   ];
-  if (state.decisionFilter !== "all") parts.push(state.decisionFilter);
+  if (state.decisionFilter !== "all") parts.push(decisionLabel);
   if (state.intentFilter !== "all") parts.push(type);
   if (state.pillarFilter !== "all") parts.push(pillarById(state.pillarFilter)?.label || state.pillarFilter);
-  if (state.segmentLens) parts.push("lens on");
+  if (state.segmentLens) parts.push("current segment only");
   if (state.query.trim()) parts.push(`search: ${state.query.trim()}`);
   if (state.focusTerm) parts.push(`focus: ${state.focusTerm}`);
   $("activeFilterBar").textContent = parts.join(" · ");
@@ -1556,7 +1599,7 @@ function formatEpisodeBrief() {
     "",
     `Watch terms: ${(episode.watchTerms || []).join(", ") || "None configured."}`,
     "",
-    "Operator flow: Run Rehearsal, watch Signal Radar, queue the best ask/signal/clip, then Copy Rundown for host handoff.",
+    "Operator flow: Run Rehearsal, watch Topic Heat, queue the best ask/signal/clip, then Copy Rundown for host handoff.",
   ].join("\n");
 }
 
@@ -1651,6 +1694,8 @@ function activateUseNowView() {
 }
 
 function bindControls() {
+  $("segmentLensBtn").classList.toggle("active", state.segmentLens);
+
   $("pauseBtn").addEventListener("click", () => {
     state.paused = !state.paused;
     $("pauseBtn").classList.toggle("isPaused", state.paused);
@@ -1926,6 +1971,28 @@ function bindControls() {
     state.decisionFilter = button.dataset.decision || "all";
     renderFeed();
     updateMetrics();
+  });
+
+  $("operatorCommand").addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-command-action]");
+    if (!button) return;
+    const action = button.dataset.commandAction;
+    if (action === "use") {
+      activateUseNowView();
+      $("feed")?.scrollIntoView({ block: "start", behavior: "smooth" });
+      return;
+    }
+    if (action === "queue") {
+      document.querySelector(".queueBlock")?.scrollIntoView({ block: "start", behavior: "smooth" });
+      return;
+    }
+    if (action === "copy") {
+      await copyText(formatSegmentBrief());
+      button.textContent = "Copied";
+      setTimeout(() => {
+        button.textContent = "Copy Brief";
+      }, 900);
+    }
   });
 
   $("operatorBrief").addEventListener("click", (event) => {

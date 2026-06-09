@@ -42,12 +42,13 @@
             </div>
           </div>
 
+          <div id="operatorCommand" class="operatorCommand" aria-label="Next operator move"></div>
           <div id="operatorBrief" class="operatorBrief" aria-label="Operator brief"></div>
           <div id="contextRail" class="contextRail"></div>
 
           <div class="feedToolbar">
             <div class="toolbarGroup sourceGroup">
-              <div class="toolbarLabel">Sources</div>
+              <div class="toolbarLabel">Live Sources</div>
               <div class="sourceToggles" role="group" aria-label="Source filters">
                 <button class="sourceToggle kick active" type="button" data-source="kick">
                   <span class="sourceGlyph">K</span>
@@ -66,11 +67,11 @@
 
             <label class="searchBox">
               <span aria-hidden="true"></span>
-              <input id="searchInput" type="search" placeholder="Search feed" autocomplete="off" />
+              <input id="searchInput" type="search" placeholder="Search audience, ticker, topic" autocomplete="off" />
             </label>
 
             <details class="advancedFilters">
-              <summary>Filters</summary>
+              <summary>Controls</summary>
               <div class="advancedFilterGrid">
                 <div>
                   <div class="toolbarLabel">Type</div>
@@ -105,14 +106,14 @@
           <section class="panelBlock assistBlock">
             <div class="blockHeader">
               <div>
-                <h2>Producer Assist</h2>
-                <div id="assistSubhead" class="blockSubhead">Current segment guidance</div>
+                <h2>Next Move</h2>
+                <div id="assistSubhead" class="blockSubhead">Best live action for the room</div>
               </div>
             </div>
             <div id="nextMove" class="nextMove"></div>
             <div class="assistStats" aria-label="Current segment status">
-              <div><span>Use now</span><strong id="assistNowCount">0</strong><small>Ready for this segment</small></div>
-              <div><span>Bring back</span><strong id="assistParkedCount">0</strong><small>Relevant but parked</small></div>
+              <div><span>Ready</span><strong id="assistNowCount">0</strong><small>Use in this segment</small></div>
+              <div><span>Later</span><strong id="assistParkedCount">0</strong><small>Good, not now</small></div>
               <div><span>Heat</span><strong id="assistHeatCount">0</strong><small>Recent watchlist hits</small></div>
             </div>
             <div class="assistActions">
@@ -124,7 +125,7 @@
           <section class="panelBlock radarBlock">
             <div class="blockHeader">
               <div>
-                <h2>Signal Radar</h2>
+                <h2>Topic Heat</h2>
                 <div id="radarSummary" class="blockSubhead">Recent watchlist heat</div>
               </div>
               <button id="resetFocusBtn" class="miniButton" type="button">Reset</button>
@@ -137,7 +138,7 @@
           <section class="panelBlock queueBlock">
             <div class="blockHeader">
               <div>
-                <h2>Operator Queue</h2>
+                <h2>Host Handoff</h2>
                 <div id="queueSummary" class="blockSubhead">0 open items</div>
               </div>
               <div class="headerButtons">
@@ -158,15 +159,15 @@
           <section class="panelBlock notesBlock">
             <div class="blockHeader">
               <div>
-                <h2>Show Notes</h2>
+                <h2>Show Setup</h2>
                 <div class="blockSubhead">Segments and watchlist</div>
               </div>
             </div>
             <div class="todaySegments">
               <div class="todaySegmentsTop">
                 <div>
-                  <strong>Today's Segments</strong>
-                  <span>Segment Mode and Use Now follow this rundown.</span>
+                  <strong>Today's Run</strong>
+                  <span>The feed uses this order to decide what is useful now.</span>
                 </div>
                 <button id="editSegmentsBtn" class="miniButton" type="button">Edit Today's Segments</button>
               </div>

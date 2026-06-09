@@ -323,14 +323,149 @@ h2 {
   line-height: 1.1;
 }
 
+.operatorCommand {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.8fr) auto;
+  align-items: stretch;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(242, 198, 112, 0.18);
+  background:
+    linear-gradient(90deg, rgba(83, 252, 24, 0.085), rgba(123, 220, 255, 0.035) 58%, rgba(0, 0, 0, 0.16)),
+    rgba(0, 0, 0, 0.24);
+}
+
+.operatorCommandMain,
+.operatorCommandMeta {
+  min-width: 0;
+}
+
+.commandKicker {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  margin-bottom: 8px;
+  border: 1px solid rgba(83, 252, 24, 0.34);
+  border-radius: 8px;
+  padding: 0 8px;
+  color: #b9ffa5;
+  background: rgba(83, 252, 24, 0.06);
+  font-size: 10px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.operatorCommand h2 {
+  overflow: hidden;
+  color: var(--green-soft);
+  font-size: 24px;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.operatorCommand p {
+  display: -webkit-box;
+  overflow: hidden;
+  margin-top: 6px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.operatorCommandMeta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.operatorCommandMeta span {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.24);
+  padding: 9px 10px;
+}
+
+.operatorCommandMeta b {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 950;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.operatorCommandMeta strong {
+  overflow: hidden;
+  color: var(--gold-bright);
+  font-size: 13px;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.operatorCommandMeta small {
+  grid-column: 1 / -1;
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.operatorCommandMeta .commandPillar.make-money {
+  border-color: rgba(83, 252, 24, 0.25);
+}
+
+.operatorCommandMeta .commandPillar.leverage-ai {
+  border-color: rgba(123, 220, 255, 0.28);
+}
+
+.operatorCommandMeta .commandPillar.command-attention {
+  border-color: rgba(255, 155, 124, 0.3);
+}
+
+.operatorCommandActions {
+  display: grid;
+  align-content: stretch;
+  gap: 8px;
+  min-width: 136px;
+}
+
+.commandButton {
+  min-height: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--text);
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.commandButton:hover,
+.commandButton.primary {
+  border-color: rgba(83, 252, 24, 0.4);
+  color: var(--green-soft);
+  background: rgba(83, 252, 24, 0.075);
+}
+
 .operatorBrief {
   display: grid;
   grid-template-columns: 1.1fr 0.85fr 1fr 0.85fr;
   gap: 10px;
-  padding: 12px 18px;
+  padding: 10px 18px 12px;
   border-bottom: 1px solid rgba(242, 198, 112, 0.16);
   background:
-    linear-gradient(90deg, rgba(83, 252, 24, 0.055), transparent 35%),
+    linear-gradient(90deg, rgba(83, 252, 24, 0.04), transparent 35%),
     rgba(0, 0, 0, 0.2);
 }
 
@@ -2350,6 +2485,14 @@ h2 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  .operatorCommand {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .operatorCommandActions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .operatorBrief {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2421,6 +2564,7 @@ h2 {
   .segmentMode,
   .pillarMode,
   .contextChips,
+  .operatorCommand,
   .decisionBar {
     width: 100%;
   }
@@ -2456,6 +2600,29 @@ h2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
     padding: 10px 12px;
+  }
+
+  .operatorCommand {
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .operatorCommand h2 {
+    font-size: 20px;
+    white-space: normal;
+  }
+
+  .operatorCommandMeta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .operatorCommandActions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .commandButton {
+    padding: 0 8px;
+    font-size: 11px;
   }
 
   .briefCard {
