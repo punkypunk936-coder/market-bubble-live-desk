@@ -601,8 +601,11 @@ function renderSegmentSetup() {
   const list = $("todaySegmentsList");
   const editor = $("segmentEditor");
   if (!list || !editor) return;
+  const editButton = $("editSegmentsBtn");
   const activeSegment = currentSegmentName();
   const segments = state.config.segments || [];
+  if (editButton) editButton.textContent = state.segmentEditorOpen ? "Close Editor" : "Edit Today's Segments";
+  list.hidden = state.segmentEditorOpen;
   list.innerHTML = segments.length
     ? segments.map((segment, index) => `
       <div class="todaySegment${segment.name === activeSegment ? " active" : ""}">
@@ -620,6 +623,23 @@ function renderSegmentSetup() {
     if (!state.segmentDraft) state.segmentDraft = cloneSegmentConfig();
     renderSegmentEditorRows();
   }
+}
+
+function openSegmentEditor() {
+  state.segmentEditorOpen = true;
+  state.segmentDraft = cloneSegmentConfig();
+  renderSegmentSetup();
+  requestAnimationFrame(() => {
+    const firstInput = document.querySelector("#segmentEditorRows [data-segment-field='name']");
+    $("segmentEditor")?.scrollIntoView({ block: "start", behavior: "smooth" });
+    firstInput?.focus({ preventScroll: true });
+  });
+}
+
+function closeSegmentEditor() {
+  state.segmentEditorOpen = false;
+  state.segmentDraft = null;
+  renderSegmentSetup();
 }
 
 function renderConfig() {
@@ -1496,15 +1516,12 @@ function bindControls() {
   });
 
   $("editSegmentsBtn").addEventListener("click", () => {
-    state.segmentEditorOpen = true;
-    state.segmentDraft = cloneSegmentConfig();
-    renderSegmentSetup();
+    if (state.segmentEditorOpen) closeSegmentEditor();
+    else openSegmentEditor();
   });
 
   $("cancelSegmentsBtn").addEventListener("click", () => {
-    state.segmentEditorOpen = false;
-    state.segmentDraft = null;
-    renderSegmentSetup();
+    closeSegmentEditor();
   });
 
   $("addSegmentBtn").addEventListener("click", () => {
