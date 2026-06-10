@@ -252,8 +252,8 @@ h2 {
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 390px;
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) 370px;
+  gap: 14px;
   align-items: start;
 }
 
@@ -263,9 +263,9 @@ h2 {
 }
 
 .feedPanel {
-  border: 1px solid var(--line);
-  background: linear-gradient(180deg, rgba(23, 18, 12, 0.78), rgba(8, 7, 5, 0.92));
-  box-shadow: var(--shadow);
+  border: 1px solid rgba(242, 198, 112, 0.14);
+  background: rgba(10, 8, 6, 0.9);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.34);
   min-height: calc(100vh - 130px);
 }
 
@@ -273,7 +273,7 @@ h2 {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: stretch;
-  border-bottom: 1px solid var(--line-strong);
+  border-bottom: 1px solid rgba(242, 198, 112, 0.18);
 }
 
 .buildStrip {
@@ -325,14 +325,14 @@ h2 {
 
 .operatorCommand {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.8fr) auto;
-  align-items: stretch;
-  gap: 12px;
-  padding: 14px 18px;
-  border-bottom: 1px solid rgba(242, 198, 112, 0.18);
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 0.72fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px 12px;
+  border-bottom: 1px solid rgba(83, 252, 24, 0.16);
   background:
-    linear-gradient(90deg, rgba(83, 252, 24, 0.085), rgba(123, 220, 255, 0.035) 58%, rgba(0, 0, 0, 0.16)),
-    rgba(0, 0, 0, 0.24);
+    linear-gradient(90deg, rgba(83, 252, 24, 0.075), rgba(123, 220, 255, 0.025) 62%, transparent),
+    rgba(0, 0, 0, 0.18);
 }
 
 .operatorCommandMain,
@@ -343,13 +343,13 @@ h2 {
 .commandKicker {
   display: inline-flex;
   align-items: center;
-  min-height: 22px;
-  margin-bottom: 8px;
-  border: 1px solid rgba(83, 252, 24, 0.34);
+  min-height: 20px;
+  margin-bottom: 6px;
+  border: 1px solid rgba(83, 252, 24, 0.25);
   border-radius: 8px;
   padding: 0 8px;
   color: #b9ffa5;
-  background: rgba(83, 252, 24, 0.06);
+  background: rgba(83, 252, 24, 0.045);
   font-size: 10px;
   font-weight: 950;
   text-transform: uppercase;
@@ -358,7 +358,7 @@ h2 {
 .operatorCommand h2 {
   overflow: hidden;
   color: var(--green-soft);
-  font-size: 24px;
+  font-size: 22px;
   line-height: 1.05;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -369,7 +369,7 @@ h2 {
   overflow: hidden;
   margin-top: 6px;
   color: var(--text);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 750;
   line-height: 1.45;
   -webkit-box-orient: vertical;
@@ -377,19 +377,22 @@ h2 {
 }
 
 .operatorCommandMeta {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  display: flex;
+  align-items: center;
+  align-content: center;
+  flex-wrap: wrap;
+  gap: 7px;
 }
 
 .operatorCommandMeta span {
   min-width: 0;
-  display: grid;
-  gap: 3px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.085);
   border-radius: 8px;
-  background: rgba(0, 0, 0, 0.24);
-  padding: 9px 10px;
+  background: rgba(0, 0, 0, 0.18);
+  padding: 7px 9px;
 }
 
 .operatorCommandMeta b {
@@ -410,7 +413,7 @@ h2 {
 }
 
 .operatorCommandMeta small {
-  grid-column: 1 / -1;
+  flex: 1 1 100%;
   display: -webkit-box;
   overflow: hidden;
   color: var(--muted);
@@ -436,8 +439,8 @@ h2 {
 .operatorCommandActions {
   display: grid;
   align-content: stretch;
-  gap: 8px;
-  min-width: 136px;
+  gap: 7px;
+  min-width: 128px;
 }
 
 .commandButton {
@@ -461,25 +464,23 @@ h2 {
 .operatorBrief {
   display: grid;
   grid-template-columns: 1.1fr 0.85fr 1fr 0.85fr;
-  gap: 10px;
-  padding: 10px 18px 12px;
-  border-bottom: 1px solid rgba(242, 198, 112, 0.16);
-  background:
-    linear-gradient(90deg, rgba(83, 252, 24, 0.04), transparent 35%),
-    rgba(0, 0, 0, 0.2);
+  gap: 8px;
+  padding: 8px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.012);
 }
 
 .briefCard {
   min-width: 0;
-  min-height: 92px;
+  min-height: 58px;
   display: grid;
   align-content: start;
-  gap: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.095);
+  gap: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
   border-radius: 8px;
-  background: rgba(0, 0, 0, 0.24);
+  background: rgba(0, 0, 0, 0.14);
   color: var(--text);
-  padding: 12px;
+  padding: 9px 10px;
   text-align: left;
 }
 
@@ -501,7 +502,7 @@ h2 {
   display: block;
   overflow: hidden;
   color: var(--gold-bright);
-  font-size: 20px;
+  font-size: 16px;
   line-height: 1.08;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -512,11 +513,11 @@ h2 {
   display: -webkit-box;
   overflow: hidden;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 750;
   line-height: 1.35;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
 }
 
 .briefCard.use {
@@ -546,10 +547,10 @@ h2 {
   align-items: center;
   justify-content: flex-start;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px 14px;
   padding: 10px 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(0, 0, 0, 0.18);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.065);
+  background: rgba(0, 0, 0, 0.12);
 }
 
 .segmentMode {
@@ -587,8 +588,8 @@ h2 {
 }
 
 .segmentButton {
-  min-height: 32px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  min-height: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.025);
   color: var(--muted);
@@ -605,13 +606,13 @@ h2 {
 }
 
 .pillarButton {
-  min-height: 34px;
+  min-height: 32px;
   display: inline-grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 1px 9px;
   align-items: center;
-  min-width: 142px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  min-width: 132px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.025);
   color: var(--muted);
@@ -688,8 +689,8 @@ h2 {
   grid-template-columns: auto minmax(220px, 1fr) auto;
   align-items: center;
   gap: 12px;
-  padding: 10px 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 9px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.065);
 }
 
 .toolbarGroup {
@@ -929,36 +930,34 @@ h2 {
 }
 
 .activeFilterBar {
-  min-height: 32px;
+  min-height: 28px;
   display: flex;
   align-items: center;
-  padding: 0 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   color: var(--muted);
-  background: rgba(255, 255, 255, 0.012);
-  font-size: 12px;
+  background: rgba(255, 255, 255, 0.01);
+  font-size: 11px;
 }
 
 .decisionBar {
   display: grid;
-  grid-template-columns: minmax(170px, 0.85fr) minmax(0, 1.35fr) minmax(0, 1fr) minmax(0, 0.9fr);
-  gap: 10px;
+  grid-template-columns: minmax(150px, 0.8fr) minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 0.9fr);
+  gap: 8px;
   align-items: stretch;
-  padding: 14px 18px 16px;
-  border-bottom: 1px solid rgba(242, 198, 112, 0.16);
-  background:
-    linear-gradient(180deg, rgba(123, 220, 255, 0.035), rgba(0, 0, 0, 0.16)),
-    rgba(0, 0, 0, 0.18);
+  padding: 10px 18px 12px;
+  border-bottom: 1px solid rgba(242, 198, 112, 0.11);
+  background: rgba(0, 0, 0, 0.13);
 }
 
 .decisionBarLabel {
-  min-height: 64px;
+  min-height: 52px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
   gap: 5px;
-  border: 1px solid rgba(242, 198, 112, 0.18);
+  border: 1px solid rgba(242, 198, 112, 0.13);
   border-radius: 8px;
   background: rgba(0, 0, 0, 0.22);
   color: var(--gold-bright);
@@ -977,16 +976,16 @@ h2 {
 }
 
 .decisionFilter {
-  min-height: 64px;
+  min-height: 52px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 4px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.11);
+  border: 1px solid rgba(255, 255, 255, 0.085);
   border-radius: 8px;
   background: rgba(0, 0, 0, 0.24);
   color: var(--muted);
-  padding: 10px 12px;
+  padding: 8px 11px;
   text-align: left;
 }
 
@@ -1017,7 +1016,7 @@ h2 {
   border-radius: 0;
   background: transparent;
   color: var(--text);
-  font-size: 26px;
+  font-size: 22px;
   line-height: 1;
 }
 
@@ -1073,23 +1072,23 @@ h2 {
 }
 
 .feed {
-  height: calc(100vh - 300px);
+  height: calc(100vh - 270px);
   min-height: 520px;
   overflow: auto;
-  padding: 18px;
+  padding: 12px 18px 18px;
   scrollbar-color: rgba(242, 198, 112, 0.35) transparent;
 }
 
 .messageRow {
   display: grid;
-  grid-template-columns: 120px minmax(110px, 176px) minmax(0, 1fr) 70px;
-  gap: 8px 14px;
+  grid-template-columns: 104px minmax(120px, 162px) minmax(0, 1fr) 64px;
+  gap: 6px 12px;
   align-items: center;
-  min-height: 68px;
-  margin-bottom: 8px;
-  padding: 11px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  background: rgba(0, 0, 0, 0.28);
+  min-height: 62px;
+  margin-bottom: 7px;
+  padding: 10px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .messageRow.priority-high {
@@ -1106,9 +1105,9 @@ h2 {
 }
 
 .messageRow.decision-use {
-  border-color: rgba(83, 252, 24, 0.28);
-  background: linear-gradient(90deg, rgba(83, 252, 24, 0.08), rgba(0, 0, 0, 0.28) 46%);
-  box-shadow: inset 3px 0 0 rgba(83, 252, 24, 0.68);
+  border-color: rgba(83, 252, 24, 0.22);
+  background: linear-gradient(90deg, rgba(83, 252, 24, 0.055), rgba(0, 0, 0, 0.2) 42%);
+  box-shadow: inset 3px 0 0 rgba(83, 252, 24, 0.48);
 }
 
 .messageRow.decision-park {
@@ -1374,13 +1373,13 @@ h2 {
 .messageText {
   min-width: 0;
   overflow-wrap: anywhere;
-  font-size: 17px;
+  font-size: 16px;
   line-height: 1.35;
 }
 
 .messageCue {
   display: none;
-  margin-top: 6px;
+  margin-top: 5px;
   color: var(--muted);
   font-size: 12px;
   font-weight: 800;
@@ -1414,7 +1413,7 @@ h2 {
 .messageAction,
 .miniButton,
 .queueButton {
-  min-height: 28px;
+  min-height: 27px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.035);
@@ -1450,21 +1449,26 @@ h2 {
 
 .sidePanel {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .panelBlock {
   min-width: 0;
-  border: 1px solid var(--line);
-  background: var(--panel);
-  box-shadow: var(--shadow);
-  padding: 14px;
+  border: 1px solid rgba(242, 198, 112, 0.13);
+  background: rgba(14, 12, 9, 0.82);
+  box-shadow: 0 14px 42px rgba(0, 0, 0, 0.28);
+  padding: 12px;
 }
 
 .assistBlock {
+  border-color: rgba(242, 198, 112, 0.22);
   background:
-    linear-gradient(180deg, rgba(123, 220, 255, 0.075), rgba(14, 12, 9, 0.92)),
+    linear-gradient(180deg, rgba(242, 198, 112, 0.045), rgba(14, 12, 9, 0.88)),
     var(--panel);
+}
+
+.assistBlock .nextMove {
+  display: none;
 }
 
 .blockHeader {
@@ -1506,16 +1510,16 @@ h2 {
 .runOfShow,
 .radarList {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .nextMove {
-  border: 1px solid rgba(242, 198, 112, 0.28);
+  border: 1px solid rgba(242, 198, 112, 0.2);
   border-radius: 8px;
   background:
     linear-gradient(180deg, rgba(242, 198, 112, 0.07), rgba(0, 0, 0, 0.24)),
     rgba(0, 0, 0, 0.24);
-  padding: 14px;
+  padding: 12px;
 }
 
 .nextMoveTop {
@@ -1599,7 +1603,7 @@ h2 {
 .nextMove h3 {
   margin: 8px 0 0;
   color: var(--gold-bright);
-  font-size: 18px;
+  font-size: 17px;
   line-height: 1.15;
   letter-spacing: 0;
 }
@@ -1607,7 +1611,7 @@ h2 {
 .nextMove p {
   margin-top: 6px;
   color: var(--text);
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.42;
   overflow-wrap: anywhere;
 }
@@ -1676,10 +1680,10 @@ h2 {
 }
 
 .assistStats div {
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.075);
   border-radius: 8px;
   background: rgba(0, 0, 0, 0.2);
-  padding: 10px;
+  padding: 9px;
 }
 
 .assistStats span {
@@ -1694,7 +1698,7 @@ h2 {
   display: block;
   margin-top: 4px;
   color: var(--gold-bright);
-  font-size: 24px;
+  font-size: 22px;
   line-height: 1;
 }
 
@@ -1720,16 +1724,16 @@ h2 {
 
 .radarItem {
   width: 100%;
-  min-height: 62px;
+  min-height: 54px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.075);
   border-radius: 8px;
   background: rgba(0, 0, 0, 0.24);
   color: var(--text);
-  padding: 10px 12px;
+  padding: 9px 10px;
   text-align: left;
 }
 
@@ -1778,7 +1782,7 @@ h2 {
 
 .radarCounts b {
   color: var(--gold-bright);
-  font-size: 24px;
+  font-size: 22px;
   line-height: 1;
 }
 
@@ -1792,7 +1796,7 @@ h2 {
 
 .focusBrief {
   margin-top: 12px;
-  border: 1px solid rgba(242, 198, 112, 0.18);
+  border: 1px solid rgba(242, 198, 112, 0.13);
   border-radius: 8px;
   background: rgba(242, 198, 112, 0.045);
   padding: 12px;
@@ -1833,9 +1837,9 @@ h2 {
 .queueItem,
 .segmentItem {
   min-width: 0;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  background: rgba(0, 0, 0, 0.24);
-  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  background: rgba(0, 0, 0, 0.18);
+  padding: 10px;
 }
 
 .queueItem.done {
@@ -2546,10 +2550,16 @@ h2 {
   }
 
   .topbar,
-  .feedToolbar,
-  .topActions {
+  .feedToolbar {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .topActions {
+    align-items: stretch;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    width: 100%;
   }
 
   .sidePanel {
@@ -2597,9 +2607,11 @@ h2 {
   }
 
   .operatorBrief {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
     gap: 8px;
+    overflow-x: auto;
     padding: 10px 12px;
+    scrollbar-color: rgba(242, 198, 112, 0.3) transparent;
   }
 
   .operatorCommand {
@@ -2612,8 +2624,8 @@ h2 {
     white-space: normal;
   }
 
-  .operatorCommandMeta {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .operatorCommandMeta small {
+    display: none;
   }
 
   .operatorCommandActions {
@@ -2626,7 +2638,8 @@ h2 {
   }
 
   .briefCard {
-    min-height: 86px;
+    flex: 0 0 148px;
+    min-height: 68px;
     padding: 10px;
   }
 
