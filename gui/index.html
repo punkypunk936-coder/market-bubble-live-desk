@@ -48,7 +48,7 @@
 
           <div class="feedToolbar">
             <div class="toolbarGroup sourceGroup">
-              <div class="toolbarLabel">Live Sources</div>
+              <div class="toolbarLabel">Sources</div>
               <div class="sourceToggles" role="group" aria-label="Source filters">
                 <button class="sourceToggle kick active" type="button" data-source="kick">
                   <span class="sourceGlyph">K</span>
@@ -71,7 +71,7 @@
             </label>
 
             <details class="advancedFilters">
-              <summary>Controls</summary>
+              <summary>More filters</summary>
               <div class="advancedFilterGrid">
                 <div>
                   <div class="toolbarLabel">Type</div>
@@ -106,39 +106,39 @@
           <section class="panelBlock assistBlock">
             <div class="blockHeader">
               <div>
-                <h2>Segment Snapshot</h2>
-                <div id="assistSubhead" class="blockSubhead">Current segment counts</div>
+                <h2>Quick Counts</h2>
+                <div id="assistSubhead" class="blockSubhead">Current show part</div>
               </div>
             </div>
             <div id="nextMove" class="nextMove"></div>
             <div class="assistStats" aria-label="Current segment status">
-              <div><span>Ready</span><strong id="assistNowCount">0</strong><small>Use in this segment</small></div>
-              <div><span>Later</span><strong id="assistParkedCount">0</strong><small>Good, not now</small></div>
-              <div><span>Heat</span><strong id="assistHeatCount">0</strong><small>Recent watchlist hits</small></div>
+              <div><span>Ready</span><strong id="assistNowCount">0</strong><small>Use now</small></div>
+              <div><span>Later</span><strong id="assistParkedCount">0</strong><small>Save for later</small></div>
+              <div><span>Topics</span><strong id="assistHeatCount">0</strong><small>Mentions</small></div>
             </div>
             <div class="assistActions">
-              <button id="triageModeBtn" class="miniButton" type="button">Show Use Now</button>
-              <button id="copySegmentBriefBtn" class="primaryButton" type="button">Copy Segment Brief</button>
+              <button id="triageModeBtn" class="miniButton" type="button">Show Best</button>
+              <button id="copySegmentBriefBtn" class="primaryButton" type="button">Copy Note</button>
             </div>
           </section>
 
           <section class="panelBlock radarBlock">
             <div class="blockHeader">
               <div>
-                <h2>Topic Heat</h2>
-                <div id="radarSummary" class="blockSubhead">Recent watchlist heat</div>
+                <h2>Topics</h2>
+                <div id="radarSummary" class="blockSubhead">What people are mentioning</div>
               </div>
               <button id="resetFocusBtn" class="miniButton" type="button">Reset</button>
             </div>
             <div id="radarList" class="radarList"></div>
             <div id="focusBrief" class="focusBrief"></div>
-            <button id="copyFocusBtn" class="primaryButton focusCopyButton" type="button">Copy Focus Brief</button>
+            <button id="copyFocusBtn" class="primaryButton focusCopyButton" type="button">Copy Topic Note</button>
           </section>
 
           <section class="panelBlock queueBlock">
             <div class="blockHeader">
               <div>
-                <h2>Host Handoff</h2>
+                <h2>Host Queue</h2>
                 <div id="queueSummary" class="blockSubhead">0 open items</div>
               </div>
               <div class="headerButtons">
@@ -159,17 +159,17 @@
           <section class="panelBlock notesBlock">
             <div class="blockHeader">
               <div>
-                <h2>Show Setup</h2>
+                <h2>Setup</h2>
                 <div class="blockSubhead">Segments and watchlist</div>
               </div>
             </div>
             <div class="todaySegments">
               <div class="todaySegmentsTop">
                 <div>
-                  <strong>Today's Run</strong>
+                  <strong>Show Order</strong>
                   <span>The feed uses this order to decide what is useful now.</span>
                 </div>
-                <button id="editSegmentsBtn" class="miniButton" type="button">Edit Today's Segments</button>
+                <button id="editSegmentsBtn" class="miniButton" type="button">Edit Show Order</button>
               </div>
               <div id="todaySegmentsList" class="todaySegmentsList"></div>
               <form id="segmentEditor" class="segmentEditor" hidden>

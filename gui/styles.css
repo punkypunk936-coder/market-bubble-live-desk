@@ -277,12 +277,12 @@ h2 {
 }
 
 .buildStrip {
-  min-height: 58px;
+  min-height: 48px;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
-  padding: 12px 18px;
+  padding: 10px 16px;
   color: var(--text);
   font-size: 15px;
 }
@@ -294,15 +294,15 @@ h2 {
 
 .deskStats {
   display: grid;
-  grid-template-columns: repeat(3, 78px);
-  border-left: 1px solid rgba(242, 198, 112, 0.2);
+  grid-template-columns: repeat(3, 64px);
+  border-left: 1px solid rgba(242, 198, 112, 0.14);
 }
 
 .deskStat {
   display: grid;
   align-content: center;
   justify-items: center;
-  min-height: 58px;
+  min-height: 48px;
   border-left: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -312,14 +312,14 @@ h2 {
 
 .deskStat span {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 900;
   text-transform: uppercase;
 }
 
 .deskStat strong {
   color: var(--gold-bright);
-  font-size: 22px;
+  font-size: 18px;
   line-height: 1.1;
 }
 
@@ -462,7 +462,7 @@ h2 {
 }
 
 .operatorBrief {
-  display: grid;
+  display: none !important;
   grid-template-columns: 1.1fr 0.85fr 1fr 0.85fr;
   gap: 8px;
   padding: 8px 18px;
@@ -607,11 +607,11 @@ h2 {
 
 .pillarButton {
   min-height: 32px;
-  display: inline-grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 1px 9px;
+  display: inline-flex;
+  justify-content: center;
+  gap: 7px;
   align-items: center;
-  min-width: 132px;
+  min-width: auto;
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.025);
@@ -631,20 +631,11 @@ h2 {
 }
 
 .pillarButton small {
-  grid-column: 1;
-  overflow: hidden;
-  font-size: 10px;
-  font-weight: 800;
-  line-height: 1.1;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: none;
 }
 
 .pillarButton strong {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  color: var(--gold-bright);
-  font-size: 16px;
+  display: none;
 }
 
 .pillarButton.active,
@@ -1186,7 +1177,7 @@ h2 {
 
 .modePill {
   width: max-content;
-  display: inline-flex;
+  display: none;
   align-items: center;
   min-height: 20px;
   margin-top: 5px;
@@ -2581,7 +2572,19 @@ h2 {
 
   .segmentMode,
   .pillarMode {
-    flex: 1 1 100%;
+    flex: 0 0 auto;
+  }
+
+  .contextRail {
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    overflow-x: auto;
+    scrollbar-color: rgba(242, 198, 112, 0.3) transparent;
+  }
+
+  .segmentButtons,
+  .pillarButtons {
+    flex-wrap: nowrap;
   }
 
   .sourceToggle,
@@ -2589,13 +2592,12 @@ h2 {
   .toggleButton,
   .segmentButton,
   .pillarButton {
-    flex: 1 1 120px;
+    flex: 0 0 auto;
     justify-content: center;
   }
 
   .pillarButton {
-    min-width: 0;
-    flex: 1 1 100%;
+    min-width: max-content;
   }
 
   .decisionBar {

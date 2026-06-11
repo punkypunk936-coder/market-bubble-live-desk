@@ -559,12 +559,12 @@ function renderDecisionBar() {
   }, { use: 0, watch: 0, park: 0, noise: 0 });
   const restCount = counts.watch + counts.park + counts.noise;
   const items = [
-    ["use", "Use Now", counts.use, "Best items for the live segment"],
-    ["rest", "Park / Watch", restCount, "Useful later or low action"],
-    ["all", "Raw Feed", scoped.length, "Every source item"],
+    ["use", "Use now", counts.use, "Best items"],
+    ["rest", "Later", restCount, "Save or ignore"],
+    ["all", "All", scoped.length, "Full feed"],
   ];
   node.innerHTML = `
-    <span class="decisionBarLabel"><strong>Feed Focus</strong><small>Start with Use Now during the show.</small></span>
+    <span class="decisionBarLabel"><strong>Show me</strong><small>Start with best items.</small></span>
     ${items.map(([status, label, count, description]) => `
       <button class="decisionFilter${state.decisionFilter === status ? " active" : ""} ${status}" type="button" data-decision="${status}">
         <span>${label}</span>
@@ -755,7 +755,7 @@ function renderSegmentSetup() {
   const editButton = $("editSegmentsBtn");
   const activeSegment = currentSegmentName();
   const segments = state.config.segments || [];
-  if (editButton) editButton.textContent = state.segmentEditorOpen ? "Close Editor" : "Edit Today's Segments";
+  if (editButton) editButton.textContent = state.segmentEditorOpen ? "Close Editor" : "Edit Show Order";
   list.hidden = state.segmentEditorOpen;
   list.innerHTML = segments.length
     ? segments.map((segment, index) => `
@@ -808,7 +808,7 @@ function renderConfig() {
   const segmentControls = segments.length
     ? `
       <div class="segmentMode" aria-label="Segment mode">
-        <span class="toolbarLabel">Current Segment</span>
+        <span class="toolbarLabel">Show part</span>
         <div class="segmentButtons" role="group" aria-label="Current show segment">
           ${segments
             .map((segment) => `
@@ -831,7 +831,7 @@ function renderConfig() {
     .join("");
   const pillarControls = `
     <div class="pillarMode" aria-label="Strategic pillar lens">
-      <span class="toolbarLabel">Why It Matters</span>
+      <span class="toolbarLabel">Angle</span>
       <div id="pillarButtons" class="pillarButtons" role="group" aria-label="Strategic pillars"></div>
     </div>
   `;
@@ -1203,20 +1203,20 @@ function renderOperatorCommand() {
   const detail = move.detail || outcome.detail || "Keep the hosts focused on the best live signal.";
   node.innerHTML = `
     <div class="operatorCommandMain">
-      <span class="commandKicker">Do next</span>
+      <span class="commandKicker">Next</span>
       <h2>${escapeHtml(move.label)}</h2>
       <p>${escapeHtml(move.body)}</p>
     </div>
     <div class="operatorCommandMeta">
-      <span><b>Segment</b><strong>${escapeHtml(activeSegment || "Set segment")}</strong></span>
-      <span><b>Becomes</b><strong>${escapeHtml(outcome.label)}</strong></span>
-      ${pillar ? `<span class="commandPillar ${escapeHtml(pillar.id)}"><b>Pillar</b><strong>${escapeHtml(pillar.label)}</strong></span>` : ""}
+      <span><b>Part</b><strong>${escapeHtml(activeSegment || "Set part")}</strong></span>
+      <span><b>Use as</b><strong>${escapeHtml(outcome.label)}</strong></span>
+      ${pillar ? `<span class="commandPillar ${escapeHtml(pillar.id)}"><b>Angle</b><strong>${escapeHtml(pillar.label)}</strong></span>` : ""}
       <small>${escapeHtml(detail)}</small>
     </div>
     <div class="operatorCommandActions">
-      <button class="commandButton primary" type="button" data-command-action="use">Show Use Now</button>
-      <button class="commandButton" type="button" data-command-action="queue">Open Handoff</button>
-      <button class="commandButton" type="button" data-command-action="copy">Copy Brief</button>
+      <button class="commandButton primary" type="button" data-command-action="use">Show Best</button>
+      <button class="commandButton" type="button" data-command-action="queue">Host Queue</button>
+      <button class="commandButton" type="button" data-command-action="copy">Copy Note</button>
     </div>
   `;
 }
@@ -1249,20 +1249,20 @@ function renderOperatorBrief() {
     <button class="briefCard segment" type="button" data-brief-action="segment">
       <span>Now</span>
       <strong>${escapeHtml(activeSegment || "No segment")}</strong>
-      <small>${activePillar ? `Pillar: ${escapeHtml(activePillar.label)} · ` : ""}${escapeHtml(segment?.brief || "Set today's rundown in Show Notes.")}</small>
+      <small>${activePillar ? `Angle: ${escapeHtml(activePillar.label)} · ` : ""}${escapeHtml(segment?.brief || "Set today's rundown in Show Notes.")}</small>
     </button>
     <button class="briefCard use" type="button" data-brief-action="use" data-feed-ready="${feedUseNowCount}" data-queue-ready="${nowItems.length}">
-      <span>Use Now</span>
+      <span>Best</span>
       <strong>${escapeHtml(String(useNowCount))} ready</strong>
       <small>${escapeHtml(move.label)} · ${escapeHtml(outcome.label)}${move.pillarLabel ? ` · ${escapeHtml(move.pillarLabel)}` : ""}</small>
     </button>
     <button class="briefCard heat" type="button" data-brief-action="radar"${radar ? ` data-term="${escapeHtml(radar.term)}"` : ""}>
-      <span>Heating Up</span>
+      <span>Topic</span>
       <strong>${escapeHtml(radar?.term || "Quiet")}</strong>
       <small>${escapeHtml(radarBody)}</small>
     </button>
     <button class="briefCard queue" type="button" data-brief-action="queue">
-      <span>Handoff</span>
+      <span>Host Queue</span>
       <strong>${openItems.length} open</strong>
       <small>For hosts: ${escapeHtml(queueMix)}</small>
     </button>
@@ -1435,22 +1435,20 @@ function renderActiveFilterBar() {
   const useNow = scopedMessages.filter((message) => decisionForMessage(message).status === "use").length;
   const visibleCount = Number.isFinite(state.visibleCount) ? state.visibleCount : scopedMessages.length;
   const decisionLabel = {
-    use: "Use Now",
-    rest: "Park / Watch",
+    use: "best items",
+    rest: "later items",
+    all: "all items",
   }[state.decisionFilter] || state.decisionFilter;
-  const parts = [
-    currentSegmentName(),
-    `${visibleCount} visible`,
-    `${useNow} use now`,
-    `${highCount} high`,
-  ];
-  if (state.decisionFilter !== "all") parts.push(decisionLabel);
+  const parts = [`Showing ${decisionLabel}`, currentSegmentName()];
+  if (state.segmentLens) parts.push("this show part only");
   if (state.intentFilter !== "all") parts.push(type);
   if (state.pillarFilter !== "all") parts.push(pillarById(state.pillarFilter)?.label || state.pillarFilter);
-  if (state.segmentLens) parts.push("current segment only");
   if (state.query.trim()) parts.push(`search: ${state.query.trim()}`);
-  if (state.focusTerm) parts.push(`focus: ${state.focusTerm}`);
-  $("activeFilterBar").textContent = parts.join(" · ");
+  if (state.focusTerm) parts.push(`topic: ${state.focusTerm}`);
+  const countText = visibleCount === useNow && state.decisionFilter === "use"
+    ? `${visibleCount} ready`
+    : `${visibleCount} shown`;
+  $("activeFilterBar").textContent = `${parts.join(" · ")} · ${countText}`;
 }
 
 function applySnapshot(payload) {
@@ -1599,7 +1597,7 @@ function formatEpisodeBrief() {
     "",
     `Watch terms: ${(episode.watchTerms || []).join(", ") || "None configured."}`,
     "",
-    "Operator flow: Run Rehearsal, watch Topic Heat, queue the best ask/signal/clip, then Copy Rundown for host handoff.",
+    "Operator flow: Run Rehearsal, watch Topics, queue the best ask/signal/clip, then Copy Rundown for the host queue.",
   ].join("\n");
 }
 
@@ -1662,7 +1660,7 @@ function formatSegmentBrief() {
     "Market Bubble segment brief",
     `Current segment: ${activeSegment}`,
     `Next move: ${move.label} - ${move.body}`,
-    briefPillar ? `Strategic pillar: ${briefPillar.label} - ${briefPillar.detail || briefPillar.short}` : "",
+    briefPillar ? `Angle: ${briefPillar.label} - ${briefPillar.detail || briefPillar.short}` : "",
     `Can become: ${outcome.label} - ${outcome.detail}`,
     `Why: ${move.detail}`,
     radar
@@ -1742,7 +1740,7 @@ function bindControls() {
     await copyText(formatSegmentBrief());
     $("copySegmentBriefBtn").textContent = "Copied";
     setTimeout(() => {
-      $("copySegmentBriefBtn").textContent = "Copy Segment Brief";
+      $("copySegmentBriefBtn").textContent = "Copy Note";
     }, 900);
   });
 
@@ -1953,7 +1951,7 @@ function bindControls() {
     await copyText(formatFocusBrief(item));
     $("copyFocusBtn").textContent = "Copied";
     setTimeout(() => {
-      $("copyFocusBtn").textContent = "Copy Focus Brief";
+      $("copyFocusBtn").textContent = "Copy Topic Note";
     }, 900);
   });
 
@@ -1990,7 +1988,7 @@ function bindControls() {
       await copyText(formatSegmentBrief());
       button.textContent = "Copied";
       setTimeout(() => {
-        button.textContent = "Copy Brief";
+        button.textContent = "Copy Note";
       }, 900);
     }
   });

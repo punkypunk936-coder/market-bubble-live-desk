@@ -29,12 +29,12 @@ The desk helps the operator answer one simple question:
 - Shows which Market Bubble segment each message belongs to.
 - Shows which core show pillar each message supports: make money, leverage AI, or command attention.
 - Marks each message as `Use Now`, `Watch`, `Park`, or `Noise`.
-- Routes good items into `Host Handoff`.
+- Routes good items into `Host Queue`.
 - Separates questions, market signals, and clip candidates.
 - Suppresses repeated text so one recycled message does not take over the feed.
 - Opens on the `Use Now` feed for the current segment.
-- Shows topic heat in `Topic Heat`.
-- Gives the producer a clear `Do Next` instruction at the top of the desk.
+- Shows topic momentum in `Topics`.
+- Gives the producer a clear `Next` instruction at the top of the desk.
 - Creates copyable focus briefs and segment rundowns.
 - Includes a latest-show rehearsal mode for demos and dry runs.
 - Includes previous-show context so the tool feels built for Market Bubble, not generic livestreaming.
@@ -66,17 +66,17 @@ That makes the desk easier to skim during a real stream.
 
 The first screen now starts with:
 
-- `Do Next`: the best action for the producer right now.
-- `Use Now`: the default feed view for the live segment.
-- `Topic Heat`: what is building across sources.
-- `Host Handoff`: the clean queue for hosts, clips, and segment notes.
+- `Next`: the best action for the producer right now.
+- `Use Now`: the default feed view for the live show part.
+- `Topics`: what is building across sources.
+- `Host Queue`: the clean queue for hosts, clips, and segment notes.
 
 ## How A Producer Uses It
 
 1. Open the desk before the show.
-2. Set `Current Segment` to the current show block.
-3. Read `Do Next` first.
-4. Use `Feed Focus` to move between `Use Now`, `Park / Watch`, and `Raw Feed`.
+2. Set `Show Part` to the current show block.
+3. Read `Next` first.
+4. Use `Show Me` to move between `Use Now`, `Later`, and `All`.
 5. Queue the best question, signal, or clip.
 6. Park off-segment items for later.
 7. Copy the segment brief or rundown when the hosts need a clean handoff.
